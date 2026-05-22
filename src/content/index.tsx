@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { cropVisibleScreenshot, startSelectionOverlay } from './selectionOverlay';
+import { cropVisibleScreenshot, renderVisibleRegionFallback, startSelectionOverlay } from './selectionOverlay';
 import { Panel, type PanelState } from './panel';
 import panelCss from './panel.css';
 import type { GeneratorSite, ImageTarget, RuntimeResponse } from '../shared/types';
@@ -71,8 +71,7 @@ async function runSelectionAnalysis(): Promise<void> {
   if (!selection) return;
   setPanelState({ open: true, loading: true, error: undefined });
   try {
-    const capture = await sendRuntimeMessage<string>({ type: 'CAPTURE_VISIBLE_TAB' });
-    const dataUrl = await cropVisibleScreenshot(capture, selection.rect);
+    const dataUrl = await captureSelectionDataUrl(selection.rect);
     lastTarget = {
       kind: 'selection',
       dataUrl,
@@ -82,6 +81,15 @@ async function runSelectionAnalysis(): Promise<void> {
     await sendRuntimeMessage({ type: 'RUN_ANALYSIS', payload: { target: lastTarget } });
   } catch (error) {
     setPanelState({ open: true, loading: false, error: errorToMessage(error) });
+  }
+}
+
+async function captureSelectionDataUrl(rect: DOMRect): Promise<string> {
+  try {
+    const capture = await sendRuntimeMessage<string>({ type: 'CAPTURE_VISIBLE_TAB' });
+    return cropVisibleScreenshot(capture, rect);
+  } catch {
+    return renderVisibleRegionFallback(rect);
   }
 }
 

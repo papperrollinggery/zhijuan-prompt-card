@@ -16,6 +16,9 @@
   "copyNotice": "Prompt copied",
   "openedGemini": true,
   "historyAfterImage": 1,
+  "selectionAnalysisOk": true,
+  "selectionHistoryTitle": "One abstract geometric icon composed of a centered dark square panel, one orange horizontal rec...",
+  "selectionPanelShowsResult": true,
   "selectionOverlay": {
     "beforeDrag": {
       "x": 0,
@@ -25,5 +28,5 @@
     },
     "afterDragRemoved": true
   },
-  "selectionCaptureAutomationNote": "Programmatic non-user-gesture capture is rejected by Chrome activeTab rules; real popup/context-menu gestures are required for captureVisibleTab."
+  "capturePath": "Primary chrome.tabs.captureVisibleTab is implemented. Automation uses DOM-render fallback when Chrome denies non-user-gesture capture."
 }

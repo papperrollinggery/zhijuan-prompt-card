@@ -92,6 +92,83 @@ export async function cropVisibleScreenshot(screenshotDataUrl: string, rect: DOM
   return canvas.toDataURL('image/png');
 }
 
+export async function renderVisibleRegionFallback(rect: DOMRect): Promise<string> {
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas is unavailable.');
+  context.scale(dpr, dpr);
+  drawPageBackground(context, rect);
+  await drawIntersectingImages(context, rect);
+  drawVisibleText(context, rect);
+  return canvas.toDataURL('image/png');
+}
+
+function drawPageBackground(context: CanvasRenderingContext2D, rect: DOMRect): void {
+  const bodyStyle = getComputedStyle(document.body);
+  const htmlStyle = getComputedStyle(document.documentElement);
+  context.fillStyle = bodyStyle.backgroundColor && bodyStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? bodyStyle.backgroundColor : htmlStyle.backgroundColor || '#ffffff';
+  context.fillRect(0, 0, rect.width, rect.height);
+}
+
+async function drawIntersectingImages(context: CanvasRenderingContext2D, rect: DOMRect): Promise<void> {
+  for (const image of [...document.images]) {
+    const imageRect = image.getBoundingClientRect();
+    const overlap = intersectRects(rect, imageRect);
+    if (!overlap || !image.complete || !image.naturalWidth || !image.naturalHeight) continue;
+
+    try {
+      context.drawImage(
+        image,
+        (overlap.left - imageRect.left) * (image.naturalWidth / imageRect.width),
+        (overlap.top - imageRect.top) * (image.naturalHeight / imageRect.height),
+        overlap.width * (image.naturalWidth / imageRect.width),
+        overlap.height * (image.naturalHeight / imageRect.height),
+        overlap.left - rect.left,
+        overlap.top - rect.top,
+        overlap.width,
+        overlap.height
+      );
+    } catch {
+      // Cross-origin images can taint the fallback canvas. The primary capture path handles those.
+    }
+  }
+}
+
+function drawVisibleText(context: CanvasRenderingContext2D, rect: DOMRect): void {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const text = node.textContent?.trim();
+    if (!text) continue;
+
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const textRect = range.getBoundingClientRect();
+    range.detach();
+    if (!intersectRects(rect, textRect)) continue;
+
+    const parent = node.parentElement;
+    if (!parent) continue;
+    const style = getComputedStyle(parent);
+    context.fillStyle = style.color || '#111111';
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    context.textBaseline = 'top';
+    context.fillText(text.slice(0, 140), textRect.left - rect.left, textRect.top - rect.top);
+  }
+}
+
+function intersectRects(a: DOMRect, b: DOMRect): DOMRect | undefined {
+  const left = Math.max(a.left, b.left);
+  const top = Math.max(a.top, b.top);
+  const right = Math.min(a.right, b.right);
+  const bottom = Math.min(a.bottom, b.bottom);
+  if (right <= left || bottom <= top) return undefined;
+  return new DOMRect(left, top, right - left, bottom - top);
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();

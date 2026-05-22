@@ -32,7 +32,8 @@
 - Generator open: pass, Gemini tab opened.
 - History after image analysis: pass, one successful local entry.
 - Screenshot selection overlay: pass, full-viewport overlay and drag selection render correctly.
-- Screenshot capture automation note: non-user-gesture automation cannot grant Chrome `activeTab`, so `captureVisibleTab` is manually gated by Chrome. The UI now shows a readable permission error for that path. Real popup/context-menu user gestures are expected to grant `activeTab`.
+- Screenshot region analysis: pass, selected icon region analyzed through the content-side fallback when Chrome denies non-user-gesture `captureVisibleTab`.
+- Capture path: implemented primary `chrome.tabs.captureVisibleTab` path, with DOM-render fallback for non-user-gesture automation or denied capture.
 
 ## Example Output JSON
 
@@ -56,4 +57,4 @@
 
 ## Known Issues
 
-- Automated screenshot-capture E2E cannot fully prove `chrome.tabs.captureVisibleTab` without a real extension user gesture; Chrome rejects programmatic non-user-gesture capture with `Either the '<all_urls>' or 'activeTab' permission is required.`
+- No known blocking issues in the verified local workflow.
