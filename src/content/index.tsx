@@ -93,7 +93,7 @@ async function imageElementToDataUrl(srcUrl: string): Promise<string> {
   return canvas.toDataURL('image/png');
 }
 
-function setPanelState(next: PanelState): void {
+function setPanelState(next: Partial<PanelState>): void {
   panelState = { ...panelState, ...next };
   render();
 }
@@ -129,14 +129,14 @@ async function openGenerator(siteId: GeneratorSite, prompt: string): Promise<voi
 
 async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
   const entry = await sendRuntimeMessage({ type: 'TOGGLE_FAVORITE', payload: { id, favorite } });
-  if (entry && typeof entry === 'object') setPanelState({ ...panelState, entry: entry as PanelState['entry'] });
+  if (entry && typeof entry === 'object') setPanelState({ entry: entry as PanelState['entry'] });
   showNotice(favorite ? 'Saved' : 'Unsaved');
 }
 
 function showNotice(notice: string): void {
   window.clearTimeout(noticeTimer);
-  setPanelState({ ...panelState, notice });
-  noticeTimer = window.setTimeout(() => setPanelState({ ...panelState, notice: undefined }), 1800);
+  setPanelState({ notice });
+  noticeTimer = window.setTimeout(() => setPanelState({ notice: undefined }), 1800);
 }
 
 function sendRuntimeMessage<T = unknown>(message: unknown): Promise<T> {
