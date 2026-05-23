@@ -19,56 +19,8 @@
 }
 
 .zpc-panel,
-.zpc-panel *,
-.zpc-launcher,
-.zpc-launcher * {
+.zpc-panel * {
   box-sizing: border-box;
-}
-
-.zpc-launcher {
-  position: fixed;
-  z-index: 2147483600;
-  right: 14px;
-  bottom: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 38px;
-  padding: 4px 11px 4px 4px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 999px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
-    rgba(8, 10, 13, 0.72);
-  color: var(--zpc-text);
-  cursor: pointer;
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  font: 800 11px/1 var(--zpc-font, inherit);
-  letter-spacing: 0;
-  transition: transform 420ms var(--zpc-ease), border-color 420ms var(--zpc-ease), box-shadow 420ms var(--zpc-ease);
-}
-
-.zpc-launcher:hover {
-  transform: translate3d(0, -2px, 0) scale(1.015);
-  border-color: var(--zpc-line-hot);
-  box-shadow: 0 22px 74px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-
-.zpc-launcher__mark {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--zpc-lake);
-  color: #07100c;
-  font: 920 13px/1 inherit;
-}
-
-.zpc-launcher__text {
-  color: rgba(242, 245, 241, 0.92);
 }
 
 .zpc-panel {
@@ -718,7 +670,6 @@
 @media (prefers-reduced-motion: reduce) {
   .zpc-panel,
   .zpc-dot--active,
-  .zpc-launcher,
   .zpc-command,
   .zpc-tabs button,
   .zpc-actions button,

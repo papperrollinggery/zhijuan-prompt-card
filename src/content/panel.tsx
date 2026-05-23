@@ -31,7 +31,6 @@ type UiLanguage = 'zh' | 'en';
 
 const copy = {
   en: {
-    launcher: 'Zhijuan Prompt',
     lens: 'Result lens',
     ready: 'Ready',
     analyzing: 'Analyzing image',
@@ -71,7 +70,6 @@ const copy = {
     negativeCopied: 'Negative copied'
   },
   zh: {
-    launcher: 'Zhijuan Prompt',
     lens: '结果镜头',
     ready: '准备就绪',
     analyzing: '正在识别图片',
@@ -121,13 +119,7 @@ export function Panel(props: PanelProps) {
   const chrome = usePanelChrome();
 
   if (!state.open) {
-    if (state.picking) return null;
-    return (
-      <button className="zpc-launcher" type="button" onClick={props.onOpen} aria-label="Open Zhijuan Prompt">
-        <span className="zpc-launcher__mark">Z</span>
-        <span className="zpc-launcher__text">{labels.launcher}</span>
-      </button>
-    );
+    return null;
   }
 
   return (
