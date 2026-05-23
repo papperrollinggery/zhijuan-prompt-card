@@ -16,10 +16,13 @@ type RuntimeMessage =
   | { type: 'OPEN_PANEL'; payload: { srcUrl?: string; pageUrl?: string } }
   | { type: 'CAPTURE_VISIBLE_TAB' }
   | { type: 'OPEN_GENERATOR_SITE'; payload: { siteId: GeneratorSite; prompt: string } }
+  | { type: 'OPEN_OPTIONS_PAGE' }
   | { type: 'TEST_CONNECTION'; payload: AppSettings }
   | { type: 'TOGGLE_FAVORITE'; payload: { id: string; favorite: boolean } };
 
-const MENU_ID = 'zhijuan-analyze-image';
+const MENU_ANALYZE_IMAGE = 'zhijuan-analyze-image';
+const MENU_PICK_IMAGE = 'zhijuan-pick-image';
+const MENU_CAPTURE_AREA = 'zhijuan-capture-area';
 const RED_TEST_IMAGE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAEklEQVR4nGP4z8DwHxkzkC4AADxAH+HggXe0AAAAAElFTkSuQmCC';
 
@@ -34,7 +37,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab?.id) return;
 
-  if (info.mediaType === 'image' && info.srcUrl) {
+  if (info.menuItemId === MENU_ANALYZE_IMAGE && info.mediaType === 'image' && info.srcUrl) {
     const target: ImageTarget = {
       kind: 'image',
       srcUrl: info.srcUrl,
@@ -45,7 +48,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     return;
   }
 
-  void chrome.tabs.sendMessage(tab.id, { type: 'START_SELECTION' }).catch(() => undefined);
+  if (info.menuItemId === MENU_PICK_IMAGE) {
+    void chrome.tabs.sendMessage(tab.id, { type: 'START_IMAGE_PICK' }).catch(() => undefined);
+    return;
+  }
+
+  if (info.menuItemId === MENU_CAPTURE_AREA) {
+    void chrome.tabs.sendMessage(tab.id, { type: 'START_SELECTION' }).catch(() => undefined);
+  }
 });
 
 chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender, sendResponse) => {
@@ -58,9 +68,19 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, sender, sendRespo
 async function installContextMenus(): Promise<void> {
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
-    id: MENU_ID,
-    title: 'Analyze image with Zhijuan Prompt Card',
-    contexts: ['image', 'page']
+    id: MENU_ANALYZE_IMAGE,
+    title: 'Analyze this image',
+    contexts: ['image']
+  });
+  chrome.contextMenus.create({
+    id: MENU_PICK_IMAGE,
+    title: 'Pick image on page',
+    contexts: ['page']
+  });
+  chrome.contextMenus.create({
+    id: MENU_CAPTURE_AREA,
+    title: 'Capture area for prompt',
+    contexts: ['page']
   });
 }
 
@@ -84,6 +104,9 @@ async function handleRuntimeMessage(message: RuntimeMessage, sender: chrome.runt
     case 'OPEN_GENERATOR_SITE':
       await copyPromptFromSenderTab(sender.tab?.id, message.payload.prompt);
       return openGeneratorSite(message.payload.siteId, message.payload.prompt);
+    case 'OPEN_OPTIONS_PAGE':
+      await chrome.runtime.openOptionsPage();
+      return true;
     case 'TEST_CONNECTION':
       return testConnection(message.payload);
     case 'TOGGLE_FAVORITE':

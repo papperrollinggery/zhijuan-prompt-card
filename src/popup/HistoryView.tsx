@@ -1,7 +1,37 @@
 import { clearHistory, deleteHistoryEntry, getHistory, updateHistoryEntry } from '../shared/storage';
-import type { HistoryEntry } from '../shared/types';
+import type { HistoryEntry, InterfaceLanguage } from '../shared/types';
 
-export function HistoryView(props: { entries: HistoryEntry[]; onBack: () => void; onRefresh: () => void }) {
+const historyCopy = {
+  en: {
+    back: 'Back',
+    history: 'History',
+    localEntries: 'local entries',
+    refresh: 'Refresh',
+    clearAll: 'Clear all',
+    copyPrompt: 'Copy prompt',
+    copyJson: 'Copy JSON',
+    saved: 'Saved',
+    save: 'Save',
+    delete: 'Delete',
+    empty: 'No history yet'
+  },
+  zh: {
+    back: '返回',
+    history: '历史',
+    localEntries: '条本地记录',
+    refresh: '刷新',
+    clearAll: '清空',
+    copyPrompt: '复制提示词',
+    copyJson: '复制 JSON',
+    saved: '已保存',
+    save: '保存',
+    delete: '删除',
+    empty: '暂无历史'
+  }
+} as const;
+
+export function HistoryView(props: { entries: HistoryEntry[]; language: InterfaceLanguage; onBack: () => void; onRefresh: () => void }) {
+  const labels = historyCopy[props.language === 'zh' ? 'zh' : 'en'];
   async function copy(text: string) {
     await writeClipboardText(text);
   }
@@ -30,20 +60,20 @@ export function HistoryView(props: { entries: HistoryEntry[]; onBack: () => void
     <main className="app-shell">
       <header className="app-header compact">
         <button type="button" onClick={props.onBack}>
-          Back
+          {labels.back}
         </button>
         <div>
-          <p>History</p>
-          <h1>{props.entries.length} local entries</h1>
+          <p>{labels.history}</p>
+          <h1>{props.entries.length} {labels.localEntries}</h1>
         </div>
       </header>
 
       <div className="quick-grid two">
         <button type="button" onClick={() => void refresh()}>
-          Refresh
+          {labels.refresh}
         </button>
         <button type="button" onClick={() => void clearAll()}>
-          Clear all
+          {labels.clearAll}
         </button>
       </div>
 
@@ -62,21 +92,21 @@ export function HistoryView(props: { entries: HistoryEntry[]; onBack: () => void
                 disabled={!entry.analysis}
                 onClick={() => entry.analysis && void copy(entry.analysis.recreation_prompt)}
               >
-                Copy prompt
+                {labels.copyPrompt}
               </button>
               <button type="button" disabled={!entry.analysis} onClick={() => entry.analysis && void copy(JSON.stringify(entry.analysis, null, 2))}>
-                Copy JSON
+                {labels.copyJson}
               </button>
               <button type="button" onClick={() => void toggle(entry)}>
-                {entry.favorite ? 'Saved' : 'Save'}
+                {entry.favorite ? labels.saved : labels.save}
               </button>
               <button type="button" onClick={() => void remove(entry.id)}>
-                Delete
+                {labels.delete}
               </button>
             </div>
           </article>
         ))}
-        {!props.entries.length ? <div className="empty-state">No history yet</div> : null}
+        {!props.entries.length ? <div className="empty-state">{labels.empty}</div> : null}
       </section>
     </main>
   );
