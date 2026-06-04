@@ -8,7 +8,13 @@ const manifest = {
   background: { service_worker: 'background.js', type: 'module' },
   action: {
     default_title: 'Zhijuan Prompt Card',
-    default_popup: 'popup.html'
+    default_popup: 'popup.html',
+    default_icon: {
+      '16': 'icons/icon-16.png',
+      '32': 'icons/icon-32.png',
+      '48': 'icons/icon-48.png',
+      '128': 'icons/icon-128.png'
+    }
   },
   options_page: 'options.html',
   icons: {

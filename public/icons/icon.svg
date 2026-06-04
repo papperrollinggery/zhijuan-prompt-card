@@ -1,7 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Zhijuan Prompt Card">
-  <rect width="128" height="128" rx="28" fill="#08090d"/>
-  <rect x="18" y="22" width="92" height="84" rx="18" fill="#11131a" stroke="#2b2f3a" stroke-width="4"/>
-  <path d="M34 76l17-20 15 15 13-17 15 22H34z" fill="#ff6f12"/>
-  <circle cx="84" cy="45" r="9" fill="#ffd4b3"/>
-  <path d="M31 92h66" stroke="#ff6f12" stroke-width="6" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="tile" x1="18" y1="14" x2="106" y2="114" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202728"/>
+      <stop offset=".58" stop-color="#080a0d"/>
+      <stop offset="1" stop-color="#15201b"/>
+    </linearGradient>
+    <linearGradient id="glyph" x1="30" y1="30" x2="96" y2="98" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f4faf4"/>
+      <stop offset="1" stop-color="#82b89b"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="104" height="104" rx="26" fill="url(#tile)"/>
+  <rect x="17" y="17" width="94" height="94" rx="22" fill="none" stroke="#82b89b" stroke-opacity=".28" stroke-width="2"/>
+  <path d="M34 45c0-4.4 3.6-8 8-8h43c4.4 0 8 3.6 8 8v34c0 4.4-3.6 8-8 8H42c-4.4 0-8-3.6-8-8V45Z" fill="none" stroke="url(#glyph)" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m38 78 19-18 13 13 12-13 10 11" fill="none" stroke="url(#glyph)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="51" cy="50" r="5" fill="#f4faf4"/>
+  <circle cx="85" cy="75" r="15" fill="#101817" stroke="url(#glyph)" stroke-width="7"/>
+  <path d="m95 85 12 12" stroke="url(#glyph)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M43 99h43M43 109h33" stroke="#82b89b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M91 30v13M84.5 36.5h13" stroke="#bdf2ce" stroke-width="5" stroke-linecap="round"/>
 </svg>

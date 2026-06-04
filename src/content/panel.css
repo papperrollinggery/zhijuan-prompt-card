@@ -181,6 +181,7 @@
   top: 7px;
   right: 7px;
   z-index: 2;
+  display: none;
   width: 8px;
   height: 8px;
   border: 1.5px solid rgba(8, 10, 13, 0.92);
@@ -190,11 +191,13 @@
 }
 
 .zpc-panel[data-state="loading"] .zpc-collapsed-badge {
+  display: block;
   background: var(--zpc-amber);
   animation: zpc-pulse 1.15s var(--zpc-ease) infinite;
 }
 
 .zpc-panel[data-state="error"] .zpc-collapsed-badge {
+  display: block;
   background: var(--zpc-danger);
 }
 
