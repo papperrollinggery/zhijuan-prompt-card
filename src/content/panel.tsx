@@ -5,6 +5,7 @@ import { GENERATOR_SITES } from '../shared/generators';
 export interface PanelState {
   open: boolean;
   loading: boolean;
+  view?: 'main' | 'history';
   error?: string;
   entry?: HistoryEntry;
   target?: ImageTarget;
@@ -16,6 +17,7 @@ export interface PanelState {
 
 export interface PanelProps {
   state: PanelState;
+  historyEntries: HistoryEntry[];
   language: InterfaceLanguage;
   onOpen: () => void;
   onClose: () => void;
@@ -25,6 +27,10 @@ export interface PanelProps {
   onStartImagePick: () => void;
   onAnalyzeFile: (file: File) => void;
   onOpenHistory: () => void;
+  onCloseHistory: () => void;
+  onRefreshHistory: () => void;
+  onSelectHistoryEntry: (entry: HistoryEntry) => void;
+  onDeleteHistoryEntry: (id: string) => void;
   onOpenSettings: () => void;
   onCopy: (text: string, label: string) => void;
   onRegenerate: () => void;
@@ -90,6 +96,13 @@ const copy = {
     floatingLabel: 'Prompt lens',
     quickActions: 'Floating actions',
     promptHistory: 'Prompt history',
+    historyCount: 'records',
+    backToPanel: 'Back',
+    refreshHistory: 'Refresh',
+    viewRecord: 'View',
+    deleteRecord: 'Delete',
+    emptyHistory: 'No local records',
+    createdAt: 'Created',
     close: 'Collapse to button',
     hide: 'Hide',
     settings: 'Settings',
@@ -152,6 +165,13 @@ const copy = {
     floatingLabel: '识图',
     quickActions: '悬浮快捷操作',
     promptHistory: '历史提示词',
+    historyCount: '条记录',
+    backToPanel: '返回',
+    refreshHistory: '刷新',
+    viewRecord: '查看',
+    deleteRecord: '删除',
+    emptyHistory: '暂无本地记录',
+    createdAt: '时间',
     close: '收起到浮标',
     hide: '隐藏',
     settings: '设置',
@@ -225,6 +245,7 @@ export function Panel(props: PanelProps) {
   }
 
   const collapsedEdge = chrome.position.x < window.innerWidth / 2 ? 'left' : 'right';
+  const collapsedStack = chrome.position.y < 118 ? 'below' : chrome.position.y > window.innerHeight - 178 ? 'above' : 'split';
 
   return (
     <section
@@ -232,6 +253,7 @@ export function Panel(props: PanelProps) {
       aria-live="polite"
       data-state={state.loading ? 'loading' : analysis ? 'result' : state.error ? 'error' : 'ready'}
       data-edge={collapsedEdge}
+      data-stack={collapsedStack}
       style={{ left: chrome.position.x, top: chrome.position.y }}
     >
       <div className="zpc-panel__edge" />
@@ -244,6 +266,14 @@ export function Panel(props: PanelProps) {
       >
         {chrome.collapsed ? (
           <>
+            <div className="zpc-collapsed-actions zpc-collapsed-actions--top" aria-label={labels.quickActions}>
+              <CollapsedActionButton label={labels.pickImage} onClick={props.onStartImagePick}>
+                <IconImage />
+              </CollapsedActionButton>
+              <CollapsedActionButton label={labels.captureArea} onClick={props.onStartAreaSelect}>
+                <IconCrop />
+              </CollapsedActionButton>
+            </div>
             <button
               className="zpc-collapsed-handle"
               type="button"
@@ -263,14 +293,11 @@ export function Panel(props: PanelProps) {
               </span>
               <span className="zpc-collapsed-badge" aria-hidden="true" />
             </button>
-            <div className="zpc-collapsed-actions" aria-label={labels.quickActions}>
-              <CollapsedActionButton label={labels.pickImage} onClick={props.onStartImagePick}>
-                <IconImage />
-              </CollapsedActionButton>
-              <CollapsedActionButton label={labels.captureArea} onClick={props.onStartAreaSelect}>
-                <IconCrop />
-              </CollapsedActionButton>
-              <CollapsedActionButton label={labels.promptHistory} onClick={props.onOpenHistory}>
+            <div className="zpc-collapsed-actions zpc-collapsed-actions--bottom" aria-label={labels.quickActions}>
+              <CollapsedActionButton label={labels.promptHistory} onClick={() => {
+                chrome.setCollapsed(false);
+                props.onOpenHistory();
+              }}>
                 <IconHistory />
               </CollapsedActionButton>
               <CollapsedActionButton label={labels.settings} onClick={props.onOpenSettings}>
@@ -281,9 +308,9 @@ export function Panel(props: PanelProps) {
         ) : (
           <>
             <div className="zpc-drag-orb" aria-hidden="true" />
-            <div className="zpc-title-stack">
+          <div className="zpc-title-stack">
               <div className="zpc-kicker">Zhijuan Prompt</div>
-              <h2>{state.loading ? labels.analyzing : analysis ? labels.output : state.picking === 'image' ? labels.pickingImage : state.picking === 'selection' ? labels.pickingSelection : labels.ready}</h2>
+              <h2>{state.view === 'history' ? labels.promptHistory : state.loading ? labels.analyzing : analysis ? labels.output : state.picking === 'image' ? labels.pickingImage : state.picking === 'selection' ? labels.pickingSelection : labels.ready}</h2>
             </div>
             <div className="zpc-header-controls">
               <LanguageToggle language={language} labels={labels} onChange={props.onLanguageChange} />
@@ -328,6 +355,18 @@ export function Panel(props: PanelProps) {
       {!chrome.collapsed ? (
         <div className="zpc-panel__body">
           <input ref={fileInputRef} className="zpc-file-input" type="file" accept="image/*" onChange={handleFileChange} />
+          {state.view === 'history' ? (
+            <HistoryBlock
+              entries={props.historyEntries}
+              labels={labels}
+              uiLanguage={language}
+              onBack={props.onCloseHistory}
+              onRefresh={props.onRefreshHistory}
+              onCopy={props.onCopy}
+              onSelect={props.onSelectHistoryEntry}
+              onDelete={props.onDeleteHistoryEntry}
+            />
+          ) : (
           <div className="zpc-workspace">
             <div className="zpc-command-row">
               <button className="zpc-command zpc-command--primary" type="button" onClick={props.onStartImagePick}>
@@ -367,6 +406,7 @@ export function Panel(props: PanelProps) {
             {analysis ? <ResultBlock {...props} analysis={analysis} activeTab={activeTab} labels={labels} uiLanguage={language} /> : null}
             {state.notice ? <div className="zpc-toast-inline">{state.notice}</div> : null}
           </div>
+          )}
         </div>
       ) : null}
     </section>
@@ -428,6 +468,59 @@ function TargetPreview(props: {
   );
 }
 
+function HistoryBlock(props: {
+  entries: HistoryEntry[];
+  labels: (typeof copy)[UiLanguage];
+  uiLanguage: UiLanguage;
+  onBack: () => void;
+  onRefresh: () => void;
+  onCopy: (text: string, label: string) => void;
+  onSelect: (entry: HistoryEntry) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="zpc-workspace zpc-history-panel">
+      <div className="zpc-history-head">
+        <div>
+          <span>{props.labels.promptHistory}</span>
+          <strong>{props.entries.length} {props.labels.historyCount}</strong>
+        </div>
+        <div className="zpc-history-head__actions">
+          <button type="button" onClick={props.onRefresh}>{props.labels.refreshHistory}</button>
+          <button type="button" onClick={props.onBack}>{props.labels.backToPanel}</button>
+        </div>
+      </div>
+      <div className="zpc-history-list">
+        {props.entries.map((entry) => {
+          const prompt = getHistoryPrompt(entry);
+          return (
+            <article className="zpc-history-item" key={entry.id}>
+              <div className="zpc-history-item__top">
+                <strong>{entry.title}</strong>
+                <span className={entry.status}>{getHistoryStatusLabel(entry.status, props.uiLanguage)}</span>
+              </div>
+              <p className="zpc-history-date">{props.labels.createdAt}: {formatHistoryDate(entry.createdAt)}</p>
+              {prompt ? <p className="zpc-history-prompt">{prompt}</p> : entry.error ? <p className="zpc-history-error">{entry.error}</p> : null}
+              <div className="zpc-history-actions">
+                <button type="button" disabled={!entry.analysis} onClick={() => props.onSelect(entry)}>
+                  {props.labels.viewRecord}
+                </button>
+                <button type="button" disabled={!prompt} onClick={() => prompt && props.onCopy(prompt, props.labels.promptCopied)}>
+                  {props.labels.copy}
+                </button>
+                <button type="button" onClick={() => props.onDelete(entry.id)}>
+                  {props.labels.deleteRecord}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        {!props.entries.length ? <div className="zpc-history-empty">{props.labels.emptyHistory}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function CollapsedActionButton(props: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
@@ -446,6 +539,23 @@ function CollapsedActionButton(props: { label: string; onClick: () => void; chil
       <span>{props.label}</span>
     </button>
   );
+}
+
+function getHistoryPrompt(entry: HistoryEntry): string {
+  return entry.analysis?.recreation_prompt || entry.analysis?.zh.prompt || entry.analysis?.en.prompt || '';
+}
+
+function getHistoryStatusLabel(status: HistoryEntry['status'], language: UiLanguage): string {
+  if (language !== 'zh') return status;
+  if (status === 'success') return '成功';
+  if (status === 'failed') return '失败';
+  if (status === 'running') return '运行中';
+  return '已取消';
+}
+
+function formatHistoryDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 function firstImageFile(files: FileList | null): File | undefined {
@@ -961,9 +1071,9 @@ function IconCollapse() {
 function IconImage() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5.8 7.4c0-1 .8-1.8 1.8-1.8h8.8c1 0 1.8.8 1.8 1.8v9.2c0 1-.8 1.8-1.8 1.8H7.6c-1 0-1.8-.8-1.8-1.8V7.4Z" />
-      <path d="m7.2 16 3.3-3.2 2 1.9 1.3-1.4 3 2.7" />
-      <path d="M14.9 9.1h.1" />
+      <rect x="5.4" y="6.2" width="13.2" height="11.6" rx="2.4" />
+      <path d="m7.4 15.8 3.3-3.2 2.1 2 1.5-1.7 2.4 2.9" />
+      <path d="M15.4 9.3h.1" />
     </svg>
   );
 }
@@ -971,8 +1081,10 @@ function IconImage() {
 function IconCrop() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 3.8v11.4c0 1 .8 1.8 1.8 1.8h11.4" />
-      <path d="M3.8 7H15c1.1 0 2 .9 2 2v11.2" />
+      <path d="M7 4.4v10.1c0 1.6.9 2.5 2.5 2.5h10.1" />
+      <path d="M4.4 7h10.1c1.6 0 2.5.9 2.5 2.5v10.1" />
+      <path d="M10 10h4" />
+      <path d="M10 14h4" />
     </svg>
   );
 }
@@ -998,8 +1110,10 @@ function IconStop() {
 function IconHistory() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5.5 5.6h13M5.5 12h13M5.5 18.4h8.8" />
-      <path d="M4.8 4.4v15.2" />
+      <rect x="5.2" y="4.8" width="13.6" height="14.4" rx="2.6" />
+      <path d="M8.5 9h7" />
+      <path d="M8.5 12h7" />
+      <path d="M8.5 15h4.6" />
     </svg>
   );
 }
@@ -1007,8 +1121,12 @@ function IconHistory() {
 function IconSettings() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z" />
-      <path d="m18.7 14 .1-2-.1-2 1.7-1.2-1.8-3.1-2 .8a7.7 7.7 0 0 0-1.7-1l-.3-2.1h-5.2l-.3 2.1a7.7 7.7 0 0 0-1.7 1l-2-.8-1.8 3.1L5.3 10a7.8 7.8 0 0 0-.1 2l.1 2-1.7 1.2 1.8 3.1 2-.8c.5.4 1.1.7 1.7 1l.3 2.1h5.2l.3-2.1c.6-.3 1.2-.6 1.7-1l2 .8 1.8-3.1L18.7 14Z" />
+      <path d="M5 7h14" />
+      <path d="M5 12h14" />
+      <path d="M5 17h14" />
+      <path d="M9 5.3v3.4" />
+      <path d="M15 10.3v3.4" />
+      <path d="M11 15.3v3.4" />
     </svg>
   );
 }

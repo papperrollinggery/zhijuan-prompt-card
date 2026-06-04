@@ -5,7 +5,7 @@ import { Panel, type PanelState } from './panel';
 import panelCss from './panel.css';
 import { STORAGE_KEYS } from '../shared/defaults';
 import { fileToDataUrl, isImageFile } from '../shared/imageData';
-import { getSettings, saveSettings } from '../shared/storage';
+import { deleteHistoryEntry, getHistory, getSettings, saveSettings } from '../shared/storage';
 import type { AnalysisPhase, GeneratorSite, HistoryEntry, ImageTarget, InterfaceLanguage, RuntimeResponse } from '../shared/types';
 
 const INSTANCE_KEY = '__zhijuanPromptCardInstanceId__';
@@ -13,6 +13,7 @@ const instanceId = `${Date.now()}-${Math.random()}`;
 
 let root: ReturnType<typeof createRoot> | undefined;
 let panelState: PanelState = { open: false, loading: false };
+let historyEntries: HistoryEntry[] = [];
 let lastTarget: ImageTarget | undefined;
 let activeAnalysisId: string | undefined;
 let activeWorkToken = 0;
@@ -69,7 +70,11 @@ function installSettingsListener(): void {
   chrome.storage?.onChanged?.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
     if (changes[STORAGE_KEYS.settings]) void loadSettingsIntoUi();
-    if (changes[STORAGE_KEYS.history]) recoverSuccessfulHistory(changes[STORAGE_KEYS.history].newValue as HistoryEntry[] | undefined);
+    if (changes[STORAGE_KEYS.history]) {
+      historyEntries = Array.isArray(changes[STORAGE_KEYS.history].newValue) ? changes[STORAGE_KEYS.history].newValue as HistoryEntry[] : [];
+      recoverSuccessfulHistory(historyEntries);
+      if (panelState.view === 'history') render();
+    }
   });
 }
 
@@ -83,7 +88,7 @@ async function handleMessage(message: any): Promise<unknown> {
     case 'SHOW_FLOATING_BUTTON':
       floatingHiddenByUser = false;
       void saveFloatingButtonPreference(true);
-      setPanelState({ open: true, loading: false, error: undefined, phase: undefined, startedAt: undefined });
+      setPanelState({ open: true, view: 'main', loading: false, error: undefined, phase: undefined, startedAt: undefined });
       return true;
     case 'HIDE_FLOATING_BUTTON':
       floatingHiddenByUser = true;
@@ -95,7 +100,7 @@ async function handleMessage(message: any): Promise<unknown> {
       activeAnalysisId = message.payload.entry?.id;
       if (activeAnalysisId) canceledAnalysisIds.delete(activeAnalysisId);
       floatingHiddenByUser = false;
-      setPanelState({ open: true, loading: true, error: undefined, entry: message.payload.entry, target: lastTarget, phase: 'preparing_image', startedAt: panelState.startedAt || Date.now() });
+      setPanelState({ open: true, view: 'main', loading: true, error: undefined, entry: message.payload.entry, target: lastTarget, phase: 'preparing_image', startedAt: panelState.startedAt || Date.now() });
       return true;
     case 'ANALYSIS_PHASE':
       if (shouldIgnoreAnalysisMessage(message.payload.id)) return true;
@@ -137,7 +142,7 @@ async function handleMessage(message: any): Promise<unknown> {
 
 async function runSelectionAnalysis(): Promise<void> {
   const workToken = beginWork();
-  setPanelState({ open: true, loading: false, error: undefined, notice: undefined, picking: 'selection', phase: undefined, startedAt: undefined });
+  setPanelState({ open: true, view: 'main', loading: false, error: undefined, notice: undefined, picking: 'selection', phase: undefined, startedAt: undefined });
   await waitForNextFrame();
   if (!isCurrentWork(workToken)) return;
   const selection = await startSelectionOverlay(getSelectionCopy());
@@ -156,7 +161,7 @@ async function runSelectionAnalysis(): Promise<void> {
       pageUrl: location.href,
       title: document.title || 'Page selection'
     };
-    setPanelState({ open: true, loading: true, error: undefined, entry: undefined, target: lastTarget, picking: undefined, phase: 'preparing_image' });
+    setPanelState({ open: true, view: 'main', loading: true, error: undefined, entry: undefined, target: lastTarget, picking: undefined, phase: 'preparing_image' });
     const entry = await sendRuntimeMessage<HistoryEntry>({ type: 'RUN_ANALYSIS', payload: { target: lastTarget } });
     if (isCurrentWork(workToken)) applyCompletedEntry(entry, lastTarget);
   } catch (error) {
@@ -166,7 +171,7 @@ async function runSelectionAnalysis(): Promise<void> {
 
 async function runImagePickAnalysis(): Promise<void> {
   const workToken = beginWork();
-  setPanelState({ open: true, loading: false, error: undefined, notice: undefined, picking: 'image', phase: undefined, startedAt: undefined });
+  setPanelState({ open: true, view: 'main', loading: false, error: undefined, notice: undefined, picking: 'image', phase: undefined, startedAt: undefined });
   await waitForNextFrame();
   if (!isCurrentWork(workToken)) return;
   const picked = await startImagePicker(getImagePickerCopy());
@@ -224,6 +229,7 @@ function render(): void {
   root?.render(
     <Panel
       state={panelState}
+      historyEntries={historyEntries}
       language={interfaceLanguage}
       onClose={() => setPanelState({ open: true, notice: undefined, picking: undefined })}
       onHide={() => {
@@ -237,6 +243,10 @@ function render(): void {
       onStartImagePick={() => void runImagePickAnalysis()}
       onAnalyzeFile={(file) => void runLocalFileAnalysis(file)}
       onOpenHistory={() => void openHistory()}
+      onCloseHistory={() => setPanelState({ view: 'main' })}
+      onRefreshHistory={() => void refreshHistory()}
+      onSelectHistoryEntry={(entry) => selectHistoryEntry(entry)}
+      onDeleteHistoryEntry={(id) => void deleteHistory(id)}
       onOpenSettings={() => void openSettings()}
       onCopy={(text, label) => void copyText(text, label)}
       onRegenerate={() => void regenerate()}
@@ -325,11 +335,11 @@ function isCurrentWork(token: number): boolean {
 }
 
 function startAnalysisPhase(phase: AnalysisPhase, target?: ImageTarget): void {
-  setPanelState({ open: true, loading: true, error: undefined, entry: undefined, notice: undefined, picking: undefined, target, phase, startedAt: Date.now() });
+  setPanelState({ open: true, view: 'main', loading: true, error: undefined, entry: undefined, notice: undefined, picking: undefined, target, phase, startedAt: Date.now() });
 }
 
 function setAnalysisPhase(phase: AnalysisPhase, target?: ImageTarget): void {
-  setPanelState({ open: true, loading: true, error: undefined, notice: undefined, picking: undefined, target: target || panelState.target, phase, startedAt: panelState.startedAt || Date.now() });
+  setPanelState({ open: true, view: 'main', loading: true, error: undefined, notice: undefined, picking: undefined, target: target || panelState.target, phase, startedAt: panelState.startedAt || Date.now() });
 }
 
 function cancelCurrentWork(): void {
@@ -342,7 +352,7 @@ function cancelCurrentWork(): void {
     void sendRuntimeMessage({ type: 'CANCEL_ANALYSIS', payload: { id } }).catch(() => undefined);
   }
   const entry = panelState.entry?.status === 'running' ? { ...panelState.entry, status: 'canceled' as const, error: getCanceledText() } : panelState.entry;
-  setPanelState({ open: true, loading: false, error: undefined, entry, target: lastTarget || panelState.target, picking: undefined, notice: getCanceledText(), phase: undefined, startedAt: undefined });
+  setPanelState({ open: true, view: 'main', loading: false, error: undefined, entry, target: lastTarget || panelState.target, picking: undefined, notice: getCanceledText(), phase: undefined, startedAt: undefined });
 }
 
 function applyCompletedEntry(entry: HistoryEntry | undefined, target: ImageTarget | undefined): void {
@@ -356,7 +366,7 @@ function applyCompletedEntry(entry: HistoryEntry | undefined, target: ImageTarge
 function applyCanceledEntry(entry: HistoryEntry | undefined, target: ImageTarget | undefined): void {
   if (entry?.id) canceledAnalysisIds.add(entry.id);
   if (entry?.id === activeAnalysisId) activeAnalysisId = undefined;
-  setPanelState({ open: true, loading: false, error: undefined, entry: panelState.entry?.analysis ? panelState.entry : entry, target, picking: undefined, notice: getCanceledText(), phase: undefined, startedAt: undefined });
+  setPanelState({ open: true, view: 'main', loading: false, error: undefined, entry: panelState.entry?.analysis ? panelState.entry : entry, target, picking: undefined, notice: getCanceledText(), phase: undefined, startedAt: undefined });
 }
 
 function shouldIgnoreAnalysisMessage(entryId: string | undefined): boolean {
@@ -369,7 +379,7 @@ function applySuccessfulEntry(entry: HistoryEntry | undefined, target: ImageTarg
   if (!entry?.analysis || entry.status !== 'success') return;
   activeAnalysisId = undefined;
   canceledAnalysisIds.delete(entry.id);
-  setPanelState({ open: !floatingHiddenByUser, loading: false, error: undefined, entry, target, picking: undefined, phase: undefined, startedAt: undefined });
+  setPanelState({ open: !floatingHiddenByUser, view: 'main', loading: false, error: undefined, entry, target, picking: undefined, phase: undefined, startedAt: undefined });
 }
 
 function isCurrentSuccessfulEntry(entryId: string | undefined): boolean {
@@ -400,7 +410,30 @@ async function openSettings(): Promise<void> {
 }
 
 async function openHistory(): Promise<void> {
-  await sendRuntimeMessage({ type: 'OPEN_HISTORY_PAGE' });
+  historyEntries = await getHistory();
+  setPanelState({ open: true, view: 'history', notice: undefined, picking: undefined });
+}
+
+async function refreshHistory(): Promise<void> {
+  historyEntries = await getHistory();
+  render();
+}
+
+async function deleteHistory(id: string): Promise<void> {
+  historyEntries = await deleteHistoryEntry(id);
+  render();
+}
+
+function selectHistoryEntry(entry: HistoryEntry): void {
+  lastTarget = historyEntryToTarget(entry);
+  setPanelState({ open: true, view: 'main', loading: false, error: entry.status === 'failed' ? entry.error : undefined, entry, target: lastTarget, picking: undefined, phase: undefined, startedAt: undefined });
+}
+
+function historyEntryToTarget(entry: HistoryEntry): ImageTarget | undefined {
+  const source = entry.imageUrl || entry.pageUrl;
+  if (!source) return undefined;
+  if (entry.imageUrl) return { kind: 'image', srcUrl: entry.imageUrl, pageUrl: entry.pageUrl, title: entry.title };
+  return { kind: entry.pageUrl?.startsWith('local-file:') ? 'local' : 'page', pageUrl: entry.pageUrl, title: entry.title };
 }
 
 async function toggleFavorite(id: string, favorite: boolean): Promise<void> {

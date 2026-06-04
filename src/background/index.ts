@@ -22,7 +22,6 @@ type RuntimeMessage =
   | { type: 'CAPTURE_VISIBLE_TAB' }
   | { type: 'OPEN_GENERATOR_SITE'; payload: { siteId: GeneratorSite; prompt: string } }
   | { type: 'OPEN_OPTIONS_PAGE' }
-  | { type: 'OPEN_HISTORY_PAGE' }
   | { type: 'TEST_CONNECTION'; payload: AppSettings }
   | { type: 'TOGGLE_FAVORITE'; payload: { id: string; favorite: boolean } };
 
@@ -158,9 +157,6 @@ async function handleRuntimeMessage(message: RuntimeMessage, sender: chrome.runt
       return openGeneratorSite(message.payload.siteId, message.payload.prompt);
     case 'OPEN_OPTIONS_PAGE':
       await chrome.runtime.openOptionsPage();
-      return true;
-    case 'OPEN_HISTORY_PAGE':
-      await chrome.tabs.create({ url: chrome.runtime.getURL('popup.html#history') });
       return true;
     case 'TEST_CONNECTION':
       return testConnection(message.payload);
