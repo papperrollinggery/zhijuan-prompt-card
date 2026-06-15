@@ -42,8 +42,8 @@ const popupCopy = {
     entries: 'entries',
     actionHint: 'Choose an image, then open History.',
     dockLabel: 'Local workflow',
-    updateAvailable: 'Update available',
-    updateCta: 'Open update settings'
+    updateAvailable: 'New version available',
+    updateCta: 'View update notes'
   },
   zh: {
     title: 'Zhijuan Prompt',
@@ -76,8 +76,8 @@ const popupCopy = {
     entries: '条',
     actionHint: '上传后到历史查看。',
     dockLabel: '本地流程',
-    updateAvailable: '有更新',
-    updateCta: '去更新设置'
+    updateAvailable: '发现新版本',
+    updateCta: '查看更新说明'
   }
 } as const;
 
@@ -249,6 +249,7 @@ export function App() {
             {' -> '}
             {updateInfo.latestVersion}
           </strong>
+          {updateInfo.releaseName ? <small>{updateInfo.releaseName}</small> : null}
           <em>{labels.updateCta}</em>
         </button>
       ) : null}

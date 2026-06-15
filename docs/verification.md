@@ -1,5 +1,27 @@
 # Verification
 
+## Release 0.3.0
+
+- Prompt optimization goal: pass, `npm run check:prompt-goal`.
+- Prompt goal coverage: 35 contract rules, 10 reconstruction priorities, 4 simulated human cases.
+- Simulated prompt cases: high-style anime energy, monochrome studio portrait, Chinese concert poster, sports dashboard screenshot with overlay.
+- Typecheck: pass, `npm run typecheck`.
+- Storage check: pass, `npm run check:storage`.
+- URL check: pass, `npm run check:url`.
+- Diff whitespace: pass, `git diff --check`.
+- Build: pass, `npm run build`.
+- Visual history smoke: pass, `npm run smoke:history`.
+- Bilibili E2E: pass, `npm run e2e:bilibili`.
+- Release package: pass, `npm run release:package`.
+- Release scan: pass, `npm run release:check`.
+- Package output: `release/zhijuan-prompt-card-0.3.0.zip`.
+- Dist manifest: pass, manifest `version` is `0.3.0`, `version_name` is `0.3.0 Prompt Fidelity`.
+- Zip manifest: pass, manifest `version` is `0.3.0`, `version_name` is `0.3.0 Prompt Fidelity`.
+- Zip required notices: pass, includes `LICENSE`, `NOTICE`, `PRIVACY.md`, `THIRD_PARTY_NOTICES.md`.
+- v0.3.0 scope: reverse prompt contract, prompt goal checks, bilingual release/update copy, version bump, docs.
+- UI structure: unchanged except update notices can show the GitHub release title when available.
+- Privacy/network scope: unchanged; update check still reads GitHub latest release metadata and image analysis still uses the user-configured endpoint.
+
 ## Release 0.2.0
 
 - Clean install: pass, `npm ci`.

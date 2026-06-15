@@ -127,8 +127,8 @@ const copy = {
     promptCopied: 'Prompt copied',
     jsonCopied: 'JSON copied',
     negativeCopied: 'Negative copied',
-    updateAvailable: 'Update available',
-    updateCta: 'Open update settings'
+    updateAvailable: 'New version available',
+    updateCta: 'View update notes'
   },
   zh: {
     lens: '结果镜头',
@@ -205,8 +205,8 @@ const copy = {
     promptCopied: '已复制提示词',
     jsonCopied: '已复制 JSON',
     negativeCopied: '已复制反向词',
-    updateAvailable: '有更新',
-    updateCta: '去更新设置'
+    updateAvailable: '发现新版本',
+    updateCta: '查看更新说明'
   }
 } as const;
 
@@ -465,6 +465,7 @@ export function Panel(props: PanelProps) {
                 {' -> '}
                 {updateInfo.latestVersion}
               </strong>
+              {updateInfo.releaseName ? <small>{updateInfo.releaseName}</small> : null}
               <em>{labels.updateCta}</em>
             </button>
           ) : null}

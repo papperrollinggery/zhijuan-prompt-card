@@ -7,6 +7,7 @@ export interface UpdateInfo {
   state: UpdateState;
   currentVersion: string;
   latestVersion: string;
+  releaseName: string;
   releaseUrl: string;
 }
 
@@ -15,6 +16,7 @@ export function createIdleUpdateInfo(): UpdateInfo {
     state: 'idle',
     currentVersion: getInstalledVersion(),
     latestVersion: '',
+    releaseName: '',
     releaseUrl: RELEASES_URL
   };
 }
@@ -30,6 +32,7 @@ export async function checkLatestRelease(currentVersion = getInstalledVersion())
     state: hasUpdate ? 'available' : 'current',
     currentVersion,
     latestVersion,
+    releaseName: release.name || release.tag_name || '',
     releaseUrl: release.html_url || RELEASES_URL
   };
 }

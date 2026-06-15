@@ -518,6 +518,17 @@
   font-weight: 800;
 }
 
+.zpc-update-notice small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--zpc-text);
+  font-size: 10.5px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .zpc-workspace {
   display: grid;
   gap: 8px;

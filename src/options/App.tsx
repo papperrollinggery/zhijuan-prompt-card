@@ -23,17 +23,17 @@ const optionsCopy = {
     interfaceSection: 'Interface',
     interfaceBody: 'Language and extension state.',
     updateSection: 'Updates',
-    updateBody: 'Check the latest GitHub release and open the download page.',
+    updateBody: 'Check the latest GitHub release and open the bilingual update notes.',
     currentVersion: 'Installed version',
     latestVersion: 'Latest version',
     checkUpdates: 'Check updates',
-    openRelease: 'Open release page',
+    openRelease: 'Open release notes',
     checkingUpdates: 'Checking',
     updateReady: 'Ready',
     updateAvailable: 'Update available',
     upToDate: 'Up to date',
     updateCheckFailed: 'Unable to check updates',
-    updateInstallHint: 'Unpacked installs cannot replace themselves silently. Download the latest release, unzip it, then reload the extension folder.',
+    updateInstallHint: 'Unpacked installs cannot replace themselves silently. Read the bilingual release notes, download the latest release, unzip it, then reload the extension folder.',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
     model: 'Model',
@@ -64,17 +64,17 @@ const optionsCopy = {
     interfaceSection: '界面',
     interfaceBody: '语言和扩展启用状态。',
     updateSection: '更新',
-    updateBody: '检查 GitHub 最新 Release，并打开下载页面。',
+    updateBody: '检查 GitHub 最新 Release，并打开中英双语更新说明。',
     currentVersion: '当前安装版本',
     latestVersion: '最新版本',
     checkUpdates: '检查更新',
-    openRelease: '打开发布页',
+    openRelease: '打开更新说明',
     checkingUpdates: '检查中',
     updateReady: '准备就绪',
     updateAvailable: '发现新版本',
     upToDate: '已是最新',
     updateCheckFailed: '无法检查更新',
-    updateInstallHint: '本地加载的 unpacked 插件不能在插件内静默替换。下载最新 release、解压后，在扩展页重新加载该文件夹。',
+    updateInstallHint: '本地加载的 unpacked 插件不能在插件内静默替换。阅读中英双语更新说明，下载最新 release、解压后，在扩展页重新加载该文件夹。',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
     model: 'Model',
@@ -317,6 +317,7 @@ export function OptionsApp() {
                 {labels.openRelease}
               </button>
             </div>
+            {updateInfo.releaseName ? <p>{updateInfo.releaseName}</p> : null}
             <p>{labels.updateInstallHint}</p>
           </div>
         </div>

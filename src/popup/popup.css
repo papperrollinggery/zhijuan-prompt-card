@@ -205,6 +205,17 @@ label svg {
   font-weight: 800;
 }
 
+.update-notice small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10.5px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .command-puck {
   position: relative;
   display: grid;
