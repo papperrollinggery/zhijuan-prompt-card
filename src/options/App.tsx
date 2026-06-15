@@ -4,6 +4,9 @@ import { GENERATOR_SITES } from '../shared/generators';
 import { getSettings, saveSettings } from '../shared/storage';
 import type { AppSettings, InterfaceLanguage, RuntimeResponse } from '../shared/types';
 
+const RELEASES_URL = 'https://github.com/papperrollinggery/zhijuan-prompt-card/releases';
+const LATEST_RELEASE_API_URL = 'https://api.github.com/repos/papperrollinggery/zhijuan-prompt-card/releases/latest';
+
 const optionsCopy = {
   en: {
     title: 'Zhijuan Prompt',
@@ -20,6 +23,18 @@ const optionsCopy = {
     generationBody: 'Model and destination used after a prompt is produced.',
     interfaceSection: 'Interface',
     interfaceBody: 'Language and extension state.',
+    updateSection: 'Updates',
+    updateBody: 'Check the latest GitHub release and open the download page.',
+    currentVersion: 'Installed version',
+    latestVersion: 'Latest version',
+    checkUpdates: 'Check updates',
+    openRelease: 'Open release page',
+    checkingUpdates: 'Checking',
+    updateReady: 'Ready',
+    updateAvailable: 'Update available',
+    upToDate: 'Up to date',
+    updateCheckFailed: 'Unable to check updates',
+    updateInstallHint: 'Unpacked installs cannot replace themselves silently. Download the latest release, unzip it, then reload the extension folder.',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
     model: 'Model',
@@ -49,6 +64,18 @@ const optionsCopy = {
     generationBody: '识别完成后默认使用的模型与生成器入口。',
     interfaceSection: '界面',
     interfaceBody: '语言和扩展启用状态。',
+    updateSection: '更新',
+    updateBody: '检查 GitHub 最新 Release，并打开下载页面。',
+    currentVersion: '当前安装版本',
+    latestVersion: '最新版本',
+    checkUpdates: '检查更新',
+    openRelease: '打开发布页',
+    checkingUpdates: '检查中',
+    updateReady: '准备就绪',
+    updateAvailable: '发现新版本',
+    upToDate: '已是最新',
+    updateCheckFailed: '无法检查更新',
+    updateInstallHint: '本地加载的 unpacked 插件不能在插件内静默替换。下载最新 release、解压后，在扩展页重新加载该文件夹。',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
     model: 'Model',
@@ -65,15 +92,31 @@ const optionsCopy = {
   }
 } as const;
 
-type SettingsSectionId = 'endpoint' | 'generation' | 'interface' | 'privacy';
+type SettingsSectionId = 'endpoint' | 'generation' | 'interface' | 'update' | 'privacy';
+type UpdateState = 'idle' | 'checking' | 'current' | 'available' | 'failed';
+type OptionsLabels = (typeof optionsCopy)[keyof typeof optionsCopy];
+
+interface UpdateInfo {
+  state: UpdateState;
+  currentVersion: string;
+  latestVersion: string;
+  releaseUrl: string;
+}
 
 export function OptionsApp() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<string>(optionsCopy.zh.ready);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('endpoint');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>(() => ({
+    state: 'idle',
+    currentVersion: getInstalledVersion(),
+    latestVersion: '',
+    releaseUrl: RELEASES_URL
+  }));
   const endpointRef = useRef<HTMLDivElement>(null);
   const generationRef = useRef<HTMLDivElement>(null);
   const interfaceRef = useRef<HTMLDivElement>(null);
+  const updateRef = useRef<HTMLDivElement>(null);
   const privacyRef = useRef<HTMLElement>(null);
   const language = normalizeLanguage(settings.interfaceLanguage);
   const labels = optionsCopy[language];
@@ -81,7 +124,8 @@ export function OptionsApp() {
     { id: 'endpoint', label: `01 ${labels.endpointSection}` },
     { id: 'generation', label: `02 ${labels.generationSection}` },
     { id: 'interface', label: `03 ${labels.interfaceSection}` },
-    { id: 'privacy', label: `04 ${labels.privacy}` }
+    { id: 'update', label: `04 ${labels.updateSection}` },
+    { id: 'privacy', label: `05 ${labels.privacy}` }
   ];
 
   useEffect(() => {
@@ -113,10 +157,35 @@ export function OptionsApp() {
       endpoint: endpointRef.current,
       generation: generationRef.current,
       interface: interfaceRef.current,
+      update: updateRef.current,
       privacy: privacyRef.current
     }[section];
     setActiveSection(section);
     target?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+  }
+
+  async function checkForUpdates() {
+    setUpdateInfo((current) => ({ ...current, state: 'checking' }));
+    try {
+      const response = await fetch(LATEST_RELEASE_API_URL, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!response.ok) throw new Error(`GitHub release check failed: ${response.status}`);
+      const release = (await response.json()) as { tag_name?: string; name?: string; html_url?: string };
+      const latestVersion = normalizeReleaseVersion(release.tag_name || release.name || '');
+      if (!latestVersion) throw new Error('Latest release did not include a version.');
+      const hasUpdate = compareVersions(latestVersion, updateInfo.currentVersion) > 0;
+      setUpdateInfo({
+        state: hasUpdate ? 'available' : 'current',
+        currentVersion: updateInfo.currentVersion,
+        latestVersion,
+        releaseUrl: release.html_url || RELEASES_URL
+      });
+    } catch {
+      setUpdateInfo((current) => ({ ...current, state: 'failed', releaseUrl: RELEASES_URL }));
+    }
+  }
+
+  function openReleasePage() {
+    window.open(updateInfo.releaseUrl || RELEASES_URL, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -242,6 +311,36 @@ export function OptionsApp() {
           </div>
         </div>
 
+        <div className="settings-section settings-section--compact" ref={updateRef}>
+          <div className="section-copy">
+            <span>04</span>
+            <h2>{labels.updateSection}</h2>
+            <p>{labels.updateBody}</p>
+          </div>
+          <div className="update-panel">
+            <div className="version-grid">
+              <div>
+                <span>{labels.currentVersion}</span>
+                <strong>{updateInfo.currentVersion}</strong>
+              </div>
+              <div>
+                <span>{labels.latestVersion}</span>
+                <strong>{updateInfo.latestVersion || '-'}</strong>
+              </div>
+              <div className={`update-state update-state--${updateInfo.state}`}>{getUpdateStateLabel(updateInfo.state, labels)}</div>
+            </div>
+            <div className="button-row">
+              <button type="button" onClick={() => void checkForUpdates()} disabled={updateInfo.state === 'checking'}>
+                {updateInfo.state === 'checking' ? labels.checkingUpdates : labels.checkUpdates}
+              </button>
+              <button type="button" className="primary" onClick={openReleasePage}>
+                {labels.openRelease}
+              </button>
+            </div>
+            <p>{labels.updateInstallHint}</p>
+          </div>
+        </div>
+
         <div className="button-row">
           <button type="button" onClick={() => void save()}>
             {labels.save}
@@ -272,6 +371,40 @@ export function OptionsApp() {
 
 function normalizeLanguage(language: InterfaceLanguage) {
   return language === 'zh' ? 'zh' : 'en';
+}
+
+function getInstalledVersion() {
+  const manifest = chrome.runtime.getManifest();
+  return manifest.version_name || manifest.version || 'unknown';
+}
+
+function normalizeReleaseVersion(version: string) {
+  return version.trim().replace(/^v/i, '').split(/\s+/)[0] || '';
+}
+
+function compareVersions(a: string, b: string) {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const diff = (left[index] || 0) - (right[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function parseVersion(version: string) {
+  return normalizeReleaseVersion(version)
+    .split('.')
+    .map((part) => Number.parseInt(part, 10))
+    .filter((part) => Number.isFinite(part));
+}
+
+function getUpdateStateLabel(state: UpdateState, labels: OptionsLabels) {
+  if (state === 'checking') return labels.checkingUpdates;
+  if (state === 'available') return labels.updateAvailable;
+  if (state === 'current') return labels.upToDate;
+  if (state === 'failed') return labels.updateCheckFailed;
+  return labels.updateReady;
 }
 
 function sendRuntimeMessage<T>(message: unknown): Promise<T> {
