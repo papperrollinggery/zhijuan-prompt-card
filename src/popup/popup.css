@@ -151,6 +151,60 @@ label svg {
   color: #07100c;
 }
 
+.update-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--line-hot);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(130, 184, 155, 0.17), rgba(255, 255, 255, 0.045)),
+    rgba(8, 10, 13, 0.72);
+  color: var(--text);
+  text-align: left;
+  box-shadow:
+    0 16px 46px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.update-notice:hover {
+  border-color: rgba(130, 184, 155, 0.72);
+  background:
+    linear-gradient(145deg, rgba(130, 184, 155, 0.24), rgba(255, 255, 255, 0.06)),
+    rgba(8, 10, 13, 0.78);
+  transform: translateY(-1px);
+}
+
+.update-notice span {
+  color: var(--lake);
+  font-size: 11px;
+  font-weight: 920;
+  line-height: 1.2;
+}
+
+.update-notice strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-notice em {
+  grid-column: 1 / -1;
+  color: var(--soft);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .command-puck {
   position: relative;
   display: grid;

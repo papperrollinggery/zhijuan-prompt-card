@@ -3,9 +3,8 @@ import { DEFAULT_SETTINGS, GENERATOR_SITE_IDS } from '../shared/defaults';
 import { GENERATOR_SITES } from '../shared/generators';
 import { getSettings, saveSettings } from '../shared/storage';
 import type { AppSettings, InterfaceLanguage, RuntimeResponse } from '../shared/types';
-
-const RELEASES_URL = 'https://github.com/papperrollinggery/zhijuan-prompt-card/releases';
-const LATEST_RELEASE_API_URL = 'https://api.github.com/repos/papperrollinggery/zhijuan-prompt-card/releases/latest';
+import { RELEASES_URL, checkLatestRelease, createIdleUpdateInfo } from '../shared/updates';
+import type { UpdateInfo, UpdateState } from '../shared/updates';
 
 const optionsCopy = {
   en: {
@@ -93,26 +92,13 @@ const optionsCopy = {
 } as const;
 
 type SettingsSectionId = 'endpoint' | 'generation' | 'interface' | 'update' | 'privacy';
-type UpdateState = 'idle' | 'checking' | 'current' | 'available' | 'failed';
 type OptionsLabels = (typeof optionsCopy)[keyof typeof optionsCopy];
-
-interface UpdateInfo {
-  state: UpdateState;
-  currentVersion: string;
-  latestVersion: string;
-  releaseUrl: string;
-}
 
 export function OptionsApp() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<string>(optionsCopy.zh.ready);
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>('endpoint');
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>(() => ({
-    state: 'idle',
-    currentVersion: getInstalledVersion(),
-    latestVersion: '',
-    releaseUrl: RELEASES_URL
-  }));
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>(() => (window.location.hash === '#update' ? 'update' : 'endpoint'));
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>(() => createIdleUpdateInfo());
   const endpointRef = useRef<HTMLDivElement>(null);
   const generationRef = useRef<HTMLDivElement>(null);
   const interfaceRef = useRef<HTMLDivElement>(null);
@@ -133,6 +119,11 @@ export function OptionsApp() {
       setSettings(next);
       setStatus(optionsCopy[normalizeLanguage(next.interfaceLanguage)].ready);
     });
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash !== '#update') return;
+    window.setTimeout(() => updateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }), 0);
   }, []);
 
   async function save() {
@@ -167,18 +158,7 @@ export function OptionsApp() {
   async function checkForUpdates() {
     setUpdateInfo((current) => ({ ...current, state: 'checking' }));
     try {
-      const response = await fetch(LATEST_RELEASE_API_URL, { headers: { Accept: 'application/vnd.github+json' } });
-      if (!response.ok) throw new Error(`GitHub release check failed: ${response.status}`);
-      const release = (await response.json()) as { tag_name?: string; name?: string; html_url?: string };
-      const latestVersion = normalizeReleaseVersion(release.tag_name || release.name || '');
-      if (!latestVersion) throw new Error('Latest release did not include a version.');
-      const hasUpdate = compareVersions(latestVersion, updateInfo.currentVersion) > 0;
-      setUpdateInfo({
-        state: hasUpdate ? 'available' : 'current',
-        currentVersion: updateInfo.currentVersion,
-        latestVersion,
-        releaseUrl: release.html_url || RELEASES_URL
-      });
+      setUpdateInfo(await checkLatestRelease(updateInfo.currentVersion));
     } catch {
       setUpdateInfo((current) => ({ ...current, state: 'failed', releaseUrl: RELEASES_URL }));
     }
@@ -371,32 +351,6 @@ export function OptionsApp() {
 
 function normalizeLanguage(language: InterfaceLanguage) {
   return language === 'zh' ? 'zh' : 'en';
-}
-
-function getInstalledVersion() {
-  const manifest = chrome.runtime.getManifest();
-  return manifest.version_name || manifest.version || 'unknown';
-}
-
-function normalizeReleaseVersion(version: string) {
-  return version.trim().replace(/^v/i, '').split(/\s+/)[0] || '';
-}
-
-function compareVersions(a: string, b: string) {
-  const left = parseVersion(a);
-  const right = parseVersion(b);
-  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
-    const diff = (left[index] || 0) - (right[index] || 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
-}
-
-function parseVersion(version: string) {
-  return normalizeReleaseVersion(version)
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
-    .filter((part) => Number.isFinite(part));
 }
 
 function getUpdateStateLabel(state: UpdateState, labels: OptionsLabels) {
