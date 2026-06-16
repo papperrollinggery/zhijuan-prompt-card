@@ -31,7 +31,7 @@ export async function analyzeImageWithApi(input: {
   const requestBody = JSON.stringify({
     model: input.settings.model,
     temperature: 0.18,
-    max_tokens: 8192,
+    max_tokens: 12288,
     messages: [
       {
         role: 'user',

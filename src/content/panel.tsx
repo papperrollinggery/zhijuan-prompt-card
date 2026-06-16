@@ -1312,7 +1312,7 @@ function usePreferredTab(analysis: PromptAnalysis | undefined, language: UiLangu
 function getTabText(analysis: PromptAnalysis, tab: PanelTab): string {
   if (tab === 'json') return JSON.stringify(analysis.json_prompt, null, 2);
   if (tab === 'negative') return analysis.negative_prompt;
-  return `${analysis[tab].prompt}\n\n${analysis[tab].analysis}`;
+  return analysis[tab].prompt;
 }
 
 function getTags(analysis: PromptAnalysis, tab: PanelTab): string[] {
