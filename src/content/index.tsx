@@ -251,6 +251,7 @@ function render(): void {
       onDeleteHistoryEntry={(id) => void deleteHistory(id)}
       onClearHistory={() => void clearAllHistory()}
       onOpenSettings={() => void openSettings()}
+      onOpenUpdateSettings={() => void openSettings('update')}
       onCopy={(text, label) => void copyText(text, label)}
       onRegenerate={() => void regenerate()}
       onCancelAnalysis={() => cancelCurrentWork()}
@@ -408,8 +409,8 @@ async function openGenerator(siteId: GeneratorSite, prompt: string): Promise<voi
   await sendRuntimeMessage({ type: 'OPEN_GENERATOR_SITE', payload: { siteId, prompt } });
 }
 
-async function openSettings(): Promise<void> {
-  await sendRuntimeMessage({ type: 'OPEN_OPTIONS_PAGE' });
+async function openSettings(hash?: 'update'): Promise<void> {
+  await sendRuntimeMessage({ type: 'OPEN_OPTIONS_PAGE', payload: hash ? { hash } : undefined });
 }
 
 async function openHistory(): Promise<void> {

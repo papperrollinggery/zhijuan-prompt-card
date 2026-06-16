@@ -94,10 +94,11 @@ Expected for a public repository:
 
 ## GitHub Release
 
-1. Tag the release, for example `v0.2.0`.
+1. Tag the release, for example `v0.3.0`.
 2. Create the GitHub release.
 3. Attach `release/zhijuan-prompt-card-<version>.zip`.
-4. Include the verification summary from `docs/verification.md`.
+4. Use a bilingual release title such as `v0.3.0 Prompt Fidelity / 提示词复刻优化`.
+5. Include the bilingual verification summary from `docs/verification.md`.
 
 ## Optional Browser Stores
 

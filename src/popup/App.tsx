@@ -3,6 +3,8 @@ import { DEFAULT_SETTINGS } from '../shared/defaults';
 import { fileToDataUrl, isImageFile } from '../shared/imageData';
 import { getSettings, saveSettings, getHistory } from '../shared/storage';
 import type { AppSettings, HistoryEntry, InterfaceLanguage, RuntimeResponse } from '../shared/types';
+import { checkLatestRelease, createIdleUpdateInfo } from '../shared/updates';
+import type { UpdateInfo } from '../shared/updates';
 import { HistoryView } from './HistoryView';
 
 type ViewMode = 'home' | 'history';
@@ -39,7 +41,9 @@ const popupCopy = {
     storage: 'Local',
     entries: 'entries',
     actionHint: 'Choose an image, then open History.',
-    dockLabel: 'Local workflow'
+    dockLabel: 'Local workflow',
+    updateAvailable: 'New version available',
+    updateCta: 'View update notes'
   },
   zh: {
     title: 'Zhijuan Prompt',
@@ -71,7 +75,9 @@ const popupCopy = {
     storage: '本地',
     entries: '条',
     actionHint: '上传后到历史查看。',
-    dockLabel: '本地流程'
+    dockLabel: '本地流程',
+    updateAvailable: '发现新版本',
+    updateCta: '查看更新说明'
   }
 } as const;
 
@@ -81,12 +87,14 @@ export function App() {
   const [status, setStatus] = useState<string>(popupCopy.zh.ready);
   const [view, setView] = useState<ViewMode>(() => (window.location.hash === '#history' ? 'history' : 'home'));
   const [fileDragActive, setFileDragActive] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>(() => createIdleUpdateInfo());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const language = normalizeLanguage(settings.interfaceLanguage);
   const labels = popupCopy[language];
 
   useEffect(() => {
     void refresh();
+    void refreshUpdateNotice();
   }, []);
 
   async function refresh() {
@@ -94,6 +102,15 @@ export function App() {
     setSettings(nextSettings);
     setStatus(popupCopy[normalizeLanguage(nextSettings.interfaceLanguage)].ready);
     setHistory(await getHistory());
+  }
+
+  async function refreshUpdateNotice() {
+    try {
+      const next = await checkLatestRelease(updateInfo.currentVersion);
+      setUpdateInfo(next.state === 'available' ? next : createIdleUpdateInfo());
+    } catch {
+      setUpdateInfo(createIdleUpdateInfo());
+    }
   }
 
   async function testConnection() {
@@ -197,6 +214,11 @@ export function App() {
     setStatus(popupCopy[normalizeLanguage(interfaceLanguage)].saved);
   }
 
+  function openUpdateSettings() {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('options.html#update') });
+    window.close();
+  }
+
   if (view === 'history') {
     return <HistoryView entries={history} language={language} onBack={() => setView('home')} onRefresh={() => void refresh()} />;
   }
@@ -218,6 +240,19 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {updateInfo.state === 'available' ? (
+        <button className="update-notice" type="button" onClick={openUpdateSettings}>
+          <span>{labels.updateAvailable}</span>
+          <strong>
+            {updateInfo.currentVersion}
+            {' -> '}
+            {updateInfo.latestVersion}
+          </strong>
+          {updateInfo.releaseName ? <small>{updateInfo.releaseName}</small> : null}
+          <em>{labels.updateCta}</em>
+        </button>
+      ) : null}
 
       <section
         className={fileDragActive ? 'command-puck is-drop-active' : 'command-puck'}

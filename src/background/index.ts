@@ -21,7 +21,7 @@ type RuntimeMessage =
   | { type: 'DISPATCH_TAB_COMMAND'; payload: { command: TabCommand; tabId?: number; allPageTabs?: boolean } }
   | { type: 'CAPTURE_VISIBLE_TAB' }
   | { type: 'OPEN_GENERATOR_SITE'; payload: { siteId: GeneratorSite; prompt: string } }
-  | { type: 'OPEN_OPTIONS_PAGE' }
+  | { type: 'OPEN_OPTIONS_PAGE'; payload?: { hash?: string } }
   | { type: 'TEST_CONNECTION'; payload: AppSettings }
   | { type: 'TOGGLE_FAVORITE'; payload: { id: string; favorite: boolean } };
 
@@ -156,7 +156,8 @@ async function handleRuntimeMessage(message: RuntimeMessage, sender: chrome.runt
       await copyPromptFromSenderTab(sender.tab?.id, message.payload.prompt);
       return openGeneratorSite(message.payload.siteId, message.payload.prompt);
     case 'OPEN_OPTIONS_PAGE':
-      await chrome.runtime.openOptionsPage();
+      if (message.payload?.hash) await chrome.tabs.create({ url: chrome.runtime.getURL(`options.html#${message.payload.hash}`) });
+      else await chrome.runtime.openOptionsPage();
       return true;
     case 'TEST_CONNECTION':
       return testConnection(message.payload);

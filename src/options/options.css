@@ -320,6 +320,66 @@ select:focus {
   gap: 10px;
 }
 
+.update-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.version-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.version-grid > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(5, 7, 8, 0.68);
+}
+
+.version-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.version-grid strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.update-state {
+  align-content: center;
+  min-width: 126px;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.update-state--available {
+  border-color: var(--line-hot);
+  background: rgba(130, 184, 155, 0.14);
+  color: #d9eadc;
+}
+
+.update-state--failed {
+  border-color: rgba(217, 133, 133, 0.44);
+  color: var(--danger);
+}
+
+.update-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 button {
   min-height: 40px;
   border: 1px solid var(--line);
@@ -408,6 +468,7 @@ footer {
 
   .settings-section,
   .field-grid,
+  .version-grid,
   .trust-panel {
     grid-template-columns: 1fr;
   }

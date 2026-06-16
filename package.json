@@ -1,6 +1,6 @@
 {
   "name": "zhijuan-prompt-card",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-first image-to-prompt Chrome extension.",
   "license": "Apache-2.0",
   "private": true,
@@ -17,6 +17,7 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "check:prompt-goal": "node scripts/check-prompt-goal.mjs",
     "check:storage": "tsx scripts/check-storage.ts",
     "check:url": "tsx scripts/check-url.ts",
     "e2e:bilibili": "node scripts/e2e-bilibili-extension.mjs",

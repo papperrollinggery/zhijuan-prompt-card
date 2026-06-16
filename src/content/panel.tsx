@@ -2,6 +2,8 @@ import { type CSSProperties, type ChangeEvent as ReactChangeEvent, type DragEven
 import type { AnalysisPhase, GeneratorSite, HistoryEntry, ImageTarget, InterfaceLanguage, PanelTab, PromptAnalysis } from '../shared/types';
 import { GENERATOR_SITES } from '../shared/generators';
 import { canShowHistoryImage, getHistoryImageKey, getHistoryImageSrc, getHistoryPreviewText, getHistoryPrompt, getHistoryStatusLabel } from '../shared/historyDisplay';
+import { checkLatestRelease, createIdleUpdateInfo } from '../shared/updates';
+import type { UpdateInfo } from '../shared/updates';
 
 export interface PanelState {
   open: boolean;
@@ -34,6 +36,7 @@ export interface PanelProps {
   onDeleteHistoryEntry: (id: string) => void;
   onClearHistory: () => void;
   onOpenSettings: () => void;
+  onOpenUpdateSettings: () => void;
   onCopy: (text: string, label: string) => void;
   onRegenerate: () => void;
   onCancelAnalysis: () => void;
@@ -123,7 +126,9 @@ const copy = {
     language: 'Language',
     promptCopied: 'Prompt copied',
     jsonCopied: 'JSON copied',
-    negativeCopied: 'Negative copied'
+    negativeCopied: 'Negative copied',
+    updateAvailable: 'New version available',
+    updateCta: 'View update notes'
   },
   zh: {
     lens: '结果镜头',
@@ -199,7 +204,9 @@ const copy = {
     language: '语言',
     promptCopied: '已复制提示词',
     jsonCopied: '已复制 JSON',
-    negativeCopied: '已复制反向词'
+    negativeCopied: '已复制反向词',
+    updateAvailable: '发现新版本',
+    updateCta: '查看更新说明'
   }
 } as const;
 
@@ -217,6 +224,7 @@ export function Panel(props: PanelProps) {
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [historyDrawerWidth, setHistoryDrawerWidth] = useState(HISTORY_DRAWER_DEFAULT_WIDTH);
   const [historyTabVisible, setHistoryTabVisible] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>(() => createIdleUpdateInfo());
   const autoExpandToken = getAutoExpandToken(state, fileDragActive);
   const lastAutoExpandToken = useRef('');
   const drawerHistoryEntries = props.historyEntries;
@@ -235,6 +243,10 @@ export function Panel(props: PanelProps) {
   useEffect(() => {
     syncPanelHostBounds(state.open, chrome.position, chrome.collapsed);
   }, [state.open, chrome.position.x, chrome.position.y, chrome.collapsed]);
+
+  useEffect(() => {
+    void refreshUpdateNotice(updateInfo.currentVersion, setUpdateInfo);
+  }, []);
 
   function analyzeFile(file: File | undefined) {
     if (!file) return;
@@ -445,6 +457,18 @@ export function Panel(props: PanelProps) {
       {!chrome.collapsed ? (
         <div className="zpc-panel__body">
           <input ref={fileInputRef} className="zpc-file-input" type="file" accept="image/*" onChange={handleFileChange} />
+          {updateInfo.state === 'available' ? (
+            <button className="zpc-update-notice" type="button" onClick={props.onOpenUpdateSettings}>
+              <span>{labels.updateAvailable}</span>
+              <strong>
+                {updateInfo.currentVersion}
+                {' -> '}
+                {updateInfo.latestVersion}
+              </strong>
+              {updateInfo.releaseName ? <small>{updateInfo.releaseName}</small> : null}
+              <em>{labels.updateCta}</em>
+            </button>
+          ) : null}
           {state.view === 'history' ? (
             <HistoryBlock
               entries={props.historyEntries}
@@ -503,6 +527,15 @@ export function Panel(props: PanelProps) {
       </section>
     </>
   );
+}
+
+async function refreshUpdateNotice(currentVersion: string, setUpdateInfo: (info: UpdateInfo) => void): Promise<void> {
+  try {
+    const next = await checkLatestRelease(currentVersion);
+    setUpdateInfo(next.state === 'available' ? next : createIdleUpdateInfo());
+  } catch {
+    setUpdateInfo(createIdleUpdateInfo());
+  }
 }
 
 function QuickHistoryStrip(props: {
