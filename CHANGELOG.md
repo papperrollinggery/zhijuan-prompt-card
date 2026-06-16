@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1 Test Build
+## 0.3.1
 
 **English**
 

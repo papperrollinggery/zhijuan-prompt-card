@@ -114,6 +114,26 @@ Image / Page Region / Local File
 - Options 页面配置 Base URL、API Key、Model、默认生成器和语言。
 - 默认不绑定任何 Zhijuan 云端服务。
 
+## Prompt Balance v0.3.1 / 提示词平衡 v0.3.1
+
+v0.3.1 improves prompt consistency and reduces template-driven drift.
+
+v0.3.1 优化提示词一致性，减少模板化造成的画面漂移。
+
+**English**
+
+- Keeps generation prompts copy-ready without mixing in analysis text.
+- Improves consistency between natural prompts and structured JSON.
+- Better preserves real-person appearance, visible surface details, layout, and materials.
+- Reduces ambiguous wording and over-polished generic outputs.
+
+**中文**
+
+- 生成提示词保持可直接复制，不再混入分析文本。
+- 改进普通提示词和结构化 JSON 的信息一致性。
+- 更好保留真人外观、可见表面关系、版式和材质细节。
+- 减少歧义表达和过度精修的泛化输出。
+
 ## Prompt Fidelity v0.3.0 / 提示词复刻 v0.3.0
 
 v0.3.0 improves image-to-prompt-to-image reconstruction fidelity.
