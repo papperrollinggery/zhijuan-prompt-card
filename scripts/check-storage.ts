@@ -206,6 +206,29 @@ const leadingBracedSchemaPoliteWrapperAnalysis = {
 };
 assert.equal(getGeneratorPrompt(leadingBracedSchemaPoliteWrapperAnalysis), 'Please create a clean poster with layered haze.');
 
+const leadingBracedSchemaNounWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for noun braced schema wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version": "reconstruction_v2"} A cinematic portrait with layered haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingBracedSchemaNounWrapperAnalysis), 'A cinematic portrait with layered haze.');
+
+const leadingBracedSchemaCommaNormalVisibleAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for comma braced visible prompt', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version": "reconstruction_v2"}, visible Chinese UI text appears on the screen with source image glow.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingBracedSchemaCommaNormalVisibleAnalysis),
+  'visible Chinese UI text appears on the screen with visual target glow.'
+);
+
 const quotedWhitespaceVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for quoted whitespace text', analysis: '' },
@@ -228,6 +251,19 @@ const possessivePromptAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(possessivePromptAnalysis), "Artist's visual target glow matches viewer's visual target note.");
+
+const realSourceNounAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for real source noun', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'The source of the backlight is behind the subject; use source image glow around the silhouette.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(realSourceNounAnalysis),
+  'The source of the backlight is behind the subject; use visual target glow around the silhouette.'
+);
 
 const unquotedVisibleTextAnalysis = {
   ...currentAnalysis,
@@ -292,6 +328,45 @@ const lowerCommaInsideVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(lowerCommaInsideVisibleTextAnalysis),
   'Poster title reads source image, reference image; use visual target glow behind the lettering.'
+);
+
+const andInsideVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for and inside visible text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SOURCE and REFERENCE IMAGE; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(andInsideVisibleTextAnalysis),
+  'Poster title reads SOURCE and REFERENCE IMAGE; use visual target glow behind the lettering.'
+);
+
+const sourceImageLabVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for source image lab visible text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SOURCE IMAGE LAB; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(sourceImageLabVisibleTextAnalysis),
+  'Poster title reads SOURCE IMAGE LAB; use visual target glow behind the lettering.'
+);
+
+const commaSourceImageLabVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for comma source image lab visible text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SOURCE IMAGE, REFERENCE IMAGE LAB; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(commaSourceImageLabVisibleTextAnalysis),
+  'Poster title reads SOURCE IMAGE, REFERENCE IMAGE LAB; use visual target glow behind the lettering.'
 );
 
 const visibleTextWithReferenceWrapperAnalysis = {

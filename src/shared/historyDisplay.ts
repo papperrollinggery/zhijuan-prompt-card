@@ -226,15 +226,11 @@ function stripLeadingBracedSchemaWrapper(prompt: string): string {
     const afterSeparator = rest.slice(separator[0].length);
     return startsWithVisibleSchemaContinuation(afterSeparator) ? prompt : afterSeparator;
   }
-  return startsWithGenerationCommand(rest) ? rest : prompt;
-}
-
-function startsWithGenerationCommand(text: string): boolean {
-  return /^(?:(?:Please|Kindly)\s+)?(?:Create|Generate|Render|Design|Produce|Make)\b/i.test(text);
+  return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
 }
 
 function startsWithVisibleSchemaContinuation(text: string): boolean {
-  return /^(?:appears|is|sits|shows|remains|visible|legible)\b/i.test(text);
+  return /^(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+label|ui\s+label|text|lettering)\b)/i.test(text);
 }
 
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
@@ -248,9 +244,7 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
-    .replace(/\bsource visual\b/gi, 'visual target')
-    .replace(/\bthe source\b/gi, 'the target')
-    .replace(/\bthis source\b/gi, 'this target'));
+    .replace(/\bsource visual\b/gi, 'visual target'));
 }
 
 function normalizeUnquotedWhitespace(text: string): string {
@@ -289,15 +283,16 @@ function sanitizeQuotedWrapperTerms(segment: string): string {
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
-    .replace(/\bsource visual\b/gi, 'visual target')
-    .replace(/\bthe source\b/gi, 'the target')
-    .replace(/\bthis source\b/gi, 'this target');
+    .replace(/\bsource visual\b/gi, 'visual target');
 }
 
 const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+text|title|label|caption|logo|watermark|sign|shirt|heading|headline|button|code\s+label|ui\s+label|shirt\s+text|screen\s+text|poster\s+text`;
 const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says)|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
 const visibleTextMarkerPattern = new RegExp(String.raw`\b${visibleTextMarkerSource}`, 'gi');
-const visibleTextMarkerStartPattern = new RegExp(String.raw`^${visibleTextMarkerSource}`, 'i');
+const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
+const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
+const commaWrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
+const andWrapperContinuationPattern = new RegExp(String.raw`^\s+and\s+(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}`, 'i');
 
 function transformVisibleTextRuns(text: string, transform: (segment: string) => string): string {
   let output = '';
@@ -321,22 +316,22 @@ function findVisibleTextRunEnd(text: string, start: number): number {
   for (let i = start; i < text.length; i += 1) {
     if (/[.;\n]/.test(text[i])) return i + 1;
     if (text[i] === ',' && startsWithCommaWrapperContinuation(text, i + 1)) return i + 1;
-    if (text.slice(i, i + 5).toLowerCase() === ' and ' && !startsWithVisibleTextMarker(text, i + 5)) return i;
+    if (startsWithAndWrapperContinuation(text, i)) return i;
     if (startsWithWrapperContinuation(text, i) && !isAfterComma(text, i)) return i;
   }
   return text.length;
 }
 
-function startsWithVisibleTextMarker(text: string, start: number): boolean {
-  return visibleTextMarkerStartPattern.test(text.slice(start));
-}
-
 function startsWithWrapperContinuation(text: string, start: number): boolean {
-  return /^(?:\s+(?:source|reference)\s+(?:image|screenshot|visual)\b(?=\s+[A-Za-z])|\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b(?=\s+[A-Za-z])|\s+recreate\b)/i.test(text.slice(start));
+  return wrapperContinuationPattern.test(text.slice(start));
 }
 
 function startsWithCommaWrapperContinuation(text: string, start: number): boolean {
-  return /^(?:\s+(?:source|reference)\s+(?:image|screenshot|visual)\b(?=\s+[A-Za-z])|\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b(?=\s+[A-Za-z])|\s+recreate\b)/i.test(text.slice(start));
+  return commaWrapperContinuationPattern.test(text.slice(start));
+}
+
+function startsWithAndWrapperContinuation(text: string, start: number): boolean {
+  return andWrapperContinuationPattern.test(text.slice(start));
 }
 
 function isAfterComma(text: string, index: number): boolean {
