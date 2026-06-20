@@ -197,9 +197,8 @@ function toRecord(value: unknown): Record<string, unknown> {
 
 function sanitizeGeneratorPromptText(prompt: string): string {
   const trimmed = stripLeadingSchemaWrapper(prompt.trim());
-  return transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText)
-    .replace(/\s+/g, ' ')
-    .trim();
+  const sanitized = transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText);
+  return normalizeUnquotedWhitespace(sanitized).trim();
 }
 
 function stripLeadingSchemaWrapper(prompt: string): string {
@@ -208,7 +207,7 @@ function stripLeadingSchemaWrapper(prompt: string): string {
   while (next !== previous) {
     previous = next;
     next = next
-      .replace(/^\s*\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
+      .replace(/^\s*\{\s*"schema_version"\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
       .replace(/^\s*\{?\s*schema_version\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
       .replace(/^\s*schema_version\s*:\s*reconstruction_v2[,.]?\s*/i, '')
       .trimStart();
@@ -232,19 +231,27 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
     .replace(/\bthis source\b/gi, 'this target'));
 }
 
+function normalizeUnquotedWhitespace(text: string): string {
+  return transformUnquotedSegments(text, (segment) => segment.replace(/\s+/g, ' '));
+}
+
+const visibleTextMarkerSource = String.raw`(?:(?:visible|legible)\s+text|title|label|caption|logo|watermark|code\s+label|ui\s+label)\s+(?:reads|says)\s+`;
+const visibleTextMarkerPattern = new RegExp(String.raw`\b${visibleTextMarkerSource}`, 'gi');
+const visibleTextMarkerStartPattern = new RegExp(String.raw`^${visibleTextMarkerSource}`, 'i');
+
 function transformVisibleTextRuns(text: string, transform: (segment: string) => string): string {
-  const markerPattern = /\b(?:(?:visible|legible)\s+text|title|label|caption|logo|watermark|code\s+label|ui\s+label)\s+(?:reads|says)\s+/gi;
   let output = '';
   let index = 0;
   let match: RegExpExecArray | null;
-  while ((match = markerPattern.exec(text))) {
+  visibleTextMarkerPattern.lastIndex = 0;
+  while ((match = visibleTextMarkerPattern.exec(text))) {
     const markerStart = match.index;
     if (markerStart < index) continue;
     output += transform(text.slice(index, markerStart));
-    const runEnd = findVisibleTextRunEnd(text, markerPattern.lastIndex);
+    const runEnd = findVisibleTextRunEnd(text, visibleTextMarkerPattern.lastIndex);
     output += text.slice(markerStart, runEnd);
     index = runEnd;
-    markerPattern.lastIndex = runEnd;
+    visibleTextMarkerPattern.lastIndex = runEnd;
   }
   output += transform(text.slice(index));
   return output;
@@ -253,8 +260,13 @@ function transformVisibleTextRuns(text: string, transform: (segment: string) => 
 function findVisibleTextRunEnd(text: string, start: number): number {
   for (let i = start; i < text.length; i += 1) {
     if (/[.;\n]/.test(text[i])) return i + 1;
+    if (text.slice(i, i + 5).toLowerCase() === ' and ' && !startsWithVisibleTextMarker(text, i + 5)) return i;
   }
   return text.length;
+}
+
+function startsWithVisibleTextMarker(text: string, start: number): boolean {
+  return visibleTextMarkerStartPattern.test(text.slice(start));
 }
 
 function transformUnquotedSegments(text: string, transform: (segment: string) => string): string {

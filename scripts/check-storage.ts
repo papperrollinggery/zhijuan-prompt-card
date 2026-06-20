@@ -137,6 +137,32 @@ const quotedSchemaValueWrapperAnalysis = {
 };
 assert.equal(getGeneratorPrompt(quotedSchemaValueWrapperAnalysis), 'Create a clean poster with layered haze.');
 
+const leadingQuotedSchemaVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for leading quoted schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"schema_version": "reconstruction_v2" appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingQuotedSchemaVisibleTextAnalysis),
+  '"schema_version": "reconstruction_v2" appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const quotedWhitespaceVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted whitespace text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads "A  B" and code label reads "line\n  two"; source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(quotedWhitespaceVisibleTextAnalysis),
+  'Poster title reads "A  B" and code label reads "line\n  two"; visual target glow behind the lettering.'
+);
+
 const possessivePromptAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for possessives', analysis: '' },
@@ -158,6 +184,19 @@ const unquotedVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(unquotedVisibleTextAnalysis),
   'Poster title reads Recreate Yourself and code label reads schema_version: reconstruction_v2; visual target glow behind the lettering.'
+);
+
+const visibleTextThenNormalWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after visible text marker', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads Recreate Yourself and source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleTextThenNormalWrapperAnalysis),
+  'Poster title reads Recreate Yourself and visual target glow behind the lettering.'
 );
 
 const visibleThenRecreateAnalysis = {
