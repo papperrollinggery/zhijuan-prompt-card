@@ -150,6 +150,39 @@ assert.equal(
   '"schema_version": "reconstruction_v2" appears as a visible code label at the top; visual target glow behind it.'
 );
 
+const leadingBracedSchemaVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for braced visible schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version": "reconstruction_v2"} appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingBracedSchemaVisibleTextAnalysis),
+  '{"schema_version": "reconstruction_v2"} appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const leadingBracedSchemaWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for braced schema wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version": "reconstruction_v2"}. Create a clean poster with layered haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingBracedSchemaWrapperAnalysis), 'Create a clean poster with layered haze.');
+
+const leadingBracedSchemaCommandWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for braced schema command wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version": "reconstruction_v2"} Create a clean poster with layered haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingBracedSchemaCommandWrapperAnalysis), 'Create a clean poster with layered haze.');
+
 const quotedWhitespaceVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for quoted whitespace text', analysis: '' },
@@ -199,6 +232,32 @@ assert.equal(
   'Poster title reads Recreate Yourself and visual target glow behind the lettering.'
 );
 
+const commaVisibleTextThenNormalWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after comma visible text marker', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads Recreate Yourself, source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(commaVisibleTextThenNormalWrapperAnalysis),
+  'Poster title reads Recreate Yourself, visual target glow behind the lettering.'
+);
+
+const visibleTextWithReferenceWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after visible text with wrapper term', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads Recreate Yourself with reference image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleTextWithReferenceWrapperAnalysis),
+  'Poster title reads Recreate Yourself with visual target glow behind the lettering.'
+);
+
 const visibleThenRecreateAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after visible text run', analysis: '' },
@@ -210,6 +269,32 @@ const visibleThenRecreateAnalysis = {
 assert.equal(
   getGeneratorPrompt(visibleThenRecreateAnalysis),
   'Poster title reads Recreate Yourself; Create the poster with visual target glow behind the lettering.'
+);
+
+const quotedWrapperTermAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted wrapper terms', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use "reference image" lighting and \'source image\' glow, while label reads "source image".'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(quotedWrapperTermAnalysis),
+  'Use "visual target" lighting and \'visual target\' glow, while label reads "source image".'
+);
+
+const signQuotedVisibleSourceTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for sign source text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'A storefront sign says "source image" and shirt text says "reference image"; use source image glow.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(signQuotedVisibleSourceTextAnalysis),
+  'A storefront sign says "source image" and shirt text says "reference image"; use visual target glow.'
 );
 
 const schemaOnlyHandoffAnalysis = {

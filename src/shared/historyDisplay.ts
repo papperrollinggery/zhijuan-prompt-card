@@ -197,7 +197,9 @@ function toRecord(value: unknown): Record<string, unknown> {
 
 function sanitizeGeneratorPromptText(prompt: string): string {
   const trimmed = stripLeadingSchemaWrapper(prompt.trim());
-  const sanitized = transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText);
+  const sanitized = sanitizeQuotedWrapperTermsOutsideVisibleText(
+    transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText)
+  );
   return normalizeUnquotedWhitespace(sanitized).trim();
 }
 
@@ -206,13 +208,22 @@ function stripLeadingSchemaWrapper(prompt: string): string {
   let previous = '';
   while (next !== previous) {
     previous = next;
-    next = next
-      .replace(/^\s*\{\s*"schema_version"\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
+    next = stripLeadingBracedSchemaWrapper(next)
       .replace(/^\s*\{?\s*schema_version\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
       .replace(/^\s*schema_version\s*:\s*reconstruction_v2[,.]?\s*/i, '')
       .trimStart();
   }
   return next;
+}
+
+function stripLeadingBracedSchemaWrapper(prompt: string): string {
+  const match = prompt.match(/^\s*\{\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}\s*/i);
+  if (!match) return prompt;
+  const rest = prompt.slice(match[0].length);
+  if (!rest) return '';
+  const separator = rest.match(/^[,.]\s*/);
+  if (separator) return rest.slice(separator[0].length);
+  return /^(?:Create|Generate|Render|Design|Produce|Make)\b/i.test(rest) ? rest : prompt;
 }
 
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
@@ -235,7 +246,44 @@ function normalizeUnquotedWhitespace(text: string): string {
   return transformUnquotedSegments(text, (segment) => segment.replace(/\s+/g, ' '));
 }
 
-const visibleTextMarkerSource = String.raw`(?:(?:visible|legible)\s+text|title|label|caption|logo|watermark|code\s+label|ui\s+label)\s+(?:reads|says)\s+`;
+function sanitizeQuotedWrapperTermsOutsideVisibleText(text: string): string {
+  let output = '';
+  let index = 0;
+  while (index < text.length) {
+    const closer = quoteCloserAt(text, index);
+    if (!closer) {
+      output += text[index];
+      index += 1;
+      continue;
+    }
+
+    const endQuoteIndex = findClosingQuoteIndex(text, closer, index + 1);
+    if (endQuoteIndex === -1) {
+      output += text.slice(index);
+      break;
+    }
+
+    const quoted = text.slice(index + 1, endQuoteIndex);
+    const sanitized = isIndexInVisibleTextRun(text, index)
+      ? quoted
+      : sanitizeQuotedWrapperTerms(quoted);
+    output += `${text[index]}${sanitized}${text[endQuoteIndex]}`;
+    index = endQuoteIndex + 1;
+  }
+  return output;
+}
+
+function sanitizeQuotedWrapperTerms(segment: string): string {
+  return segment
+    .replace(/\breference image\b/gi, 'visual target')
+    .replace(/\bsource image\b/gi, 'visual target')
+    .replace(/\bsource screenshot\b/gi, 'target screenshot')
+    .replace(/\bsource visual\b/gi, 'visual target')
+    .replace(/\bthe source\b/gi, 'the target')
+    .replace(/\bthis source\b/gi, 'this target');
+}
+
+const visibleTextMarkerSource = String.raw`(?:(?:visible|legible)\s+text|title|label|caption|logo|watermark|sign|heading|headline|button|code\s+label|ui\s+label|shirt\s+text|screen\s+text|poster\s+text)\s+(?:reads|says)\s+`;
 const visibleTextMarkerPattern = new RegExp(String.raw`\b${visibleTextMarkerSource}`, 'gi');
 const visibleTextMarkerStartPattern = new RegExp(String.raw`^${visibleTextMarkerSource}`, 'i');
 
@@ -259,14 +307,31 @@ function transformVisibleTextRuns(text: string, transform: (segment: string) => 
 
 function findVisibleTextRunEnd(text: string, start: number): number {
   for (let i = start; i < text.length; i += 1) {
-    if (/[.;\n]/.test(text[i])) return i + 1;
+    if (/[.;,\n]/.test(text[i])) return i + 1;
     if (text.slice(i, i + 5).toLowerCase() === ' and ' && !startsWithVisibleTextMarker(text, i + 5)) return i;
+    if (startsWithWrapperContinuation(text, i)) return i;
   }
   return text.length;
 }
 
 function startsWithVisibleTextMarker(text: string, start: number): boolean {
   return visibleTextMarkerStartPattern.test(text.slice(start));
+}
+
+function startsWithWrapperContinuation(text: string, start: number): boolean {
+  return /^(?:\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b|\s+recreate\b)/i.test(text.slice(start));
+}
+
+function isIndexInVisibleTextRun(text: string, index: number): boolean {
+  let match: RegExpExecArray | null;
+  visibleTextMarkerPattern.lastIndex = 0;
+  while ((match = visibleTextMarkerPattern.exec(text))) {
+    const start = match.index;
+    const end = findVisibleTextRunEnd(text, visibleTextMarkerPattern.lastIndex);
+    if (index >= start && index < end) return true;
+    visibleTextMarkerPattern.lastIndex = end;
+  }
+  return false;
 }
 
 function transformUnquotedSegments(text: string, transform: (segment: string) => string): string {
