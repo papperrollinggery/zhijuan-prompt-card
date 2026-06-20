@@ -188,9 +188,27 @@ function firstSanitizedPrompt(...prompts: Array<string | undefined>): string {
 }
 
 function isGenericHandoffFiller(prompt: string): boolean {
-  const normalized = prompt.trim().replace(/[.!]+$/, '').toLowerCase();
+  const normalized = prompt.trim().replace(/[.!;]+$/, '').toLowerCase();
   if (!normalized) return true;
   return /^(?:visual targets?|target screenshots?|target photos?|create|create the described (?:image|target))$/.test(normalized);
+}
+
+const handoffActionVerbSource = String.raw`(?:create|keep|preserve|retain|include|use|maintain|render|show|depict)`;
+const uploadRequestTailSource = String.raw`(?:\s+(?:for|as|to)\s+(?:(?!\s+(?:and|then)\s+${handoffActionVerbSource}\b|\s+with\b)[^.;,\n])+)?`;
+const uploadReferenceRequestSource = String.raw`(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b${uploadRequestTailSource}`;
+const joinedUploadReferenceRequestPattern = new RegExp(String.raw`(?:\s+and\s+|,\s+)${uploadReferenceRequestSource}`, 'gi');
+const leadingUploadReferenceRequestPattern = new RegExp(String.raw`\b${uploadReferenceRequestSource}(?:,\s*)?`, 'gi');
+const leadingHandoffConnectorPattern = new RegExp(String.raw`^(\s*)(?:then|and)\s+(?=${handoffActionVerbSource}\b)`, 'i');
+const leadingHandoffActionPattern = new RegExp(String.raw`^(\s*)(${handoffActionVerbSource})\b`, 'i');
+const leadingBoundaryHandoffConnectorPattern = new RegExp(String.raw`^(\s*)([.;])\s*(?:then|and)\s+(?=${handoffActionVerbSource}\b)`, 'i');
+const leadingBoundaryHandoffActionPattern = new RegExp(String.raw`^(\s*)([.;])\s*(${handoffActionVerbSource})\b`, 'i');
+const leadingBoundaryWithDetailPattern = /^(\s*)([.;])\s*with\b/i;
+const leadingWithDetailPattern = /^(\s*)with\b/i;
+const leadingCreatePattern = /^(\s*)create\b/i;
+
+function formatBoundaryAction(leading: string, boundary: string, verb: string): string {
+  const normalizedVerb = boundary === '.' ? `${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}` : verb.toLowerCase();
+  return `${leading}${boundary} ${normalizedVerb}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -273,33 +291,53 @@ function startsWithVisibleSchemaContinuation(text: string): boolean {
 }
 
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
-  return transformVisibleTextRuns(prompt, (segment) => segment
-    .replace(/(?:\s+and\s+|,\s+)(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b(?:\s+(?:for|as)\s+[^.;,\n]+|\s+to\s+(?:(?!\s+(?:and|then)\s+create\b)[^.;,\n])+)?/gi, '')
-    .replace(/\b(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b(?:\s+(?:for|as)\s+[^.;,\n]+|\s+to\s+(?:(?!\s+(?:and|then)\s+create\b)[^.;,\n])+)?(?:,\s*)?/gi, '')
-    .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
-    .replace(/^(\s*)recreate\s+(an?|the)\s+/i, (_match, leading: string, article: string) => `${leading}Create ${article} `)
-    .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
-    .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
-    .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
-    .replace(/\brecreate\b/gi, 'create')
-    .replace(/^(\s*)(?:then|and)\s+(?=create\b)/i, '$1')
-    .replace(/^(\s*)create\b/i, (_match, leading: string) => `${leading}Create`)
-    .replace(/\breference images\b/gi, 'visual targets')
-    .replace(/\breference screenshots\b/gi, 'target screenshots')
-    .replace(/\breference visuals\b/gi, 'visual targets')
-    .replace(/\breference photos\b/gi, 'target photos')
-    .replace(/\breference image\b/gi, 'visual target')
-    .replace(/\breference screenshot\b/gi, 'target screenshot')
-    .replace(/\breference visual\b/gi, 'visual target')
-    .replace(/\breference photo\b/gi, 'target photo')
-    .replace(/\bsource images\b/gi, 'visual targets')
-    .replace(/\bsource screenshots\b/gi, 'target screenshots')
-    .replace(/\bsource visuals\b/gi, 'visual targets')
-    .replace(/\bsource photos\b/gi, 'target photos')
-    .replace(/\bsource image\b/gi, 'visual target')
-    .replace(/\bsource screenshot\b/gi, 'target screenshot')
-    .replace(/\bsource visual\b/gi, 'visual target')
-    .replace(/\bsource photo\b/gi, 'target photo'));
+  return transformVisibleTextRuns(prompt, (segment) => {
+    let removedUploadRequest = false;
+    const markUploadRequestRemoved = () => {
+      removedUploadRequest = true;
+      return '';
+    };
+    let next = segment
+      .replace(joinedUploadReferenceRequestPattern, markUploadRequestRemoved)
+      .replace(leadingUploadReferenceRequestPattern, markUploadRequestRemoved)
+      .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
+      .replace(/^(\s*)recreate\s+(an?|the)\s+/i, (_match, leading: string, article: string) => `${leading}Create ${article} `)
+      .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
+      .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
+      .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
+      .replace(/\brecreate\b/gi, 'create');
+    if (removedUploadRequest) {
+      next = next.replace(/,\s+(?=with\b)/gi, ' ');
+    }
+    next = next
+      .replace(leadingBoundaryWithDetailPattern, (_match, leading: string, boundary: string) => `${leading}${boundary} ${boundary === '.' ? 'Include' : 'include'}`)
+      .replace(leadingBoundaryHandoffConnectorPattern, (_match, leading: string, boundary: string) => `${leading}${boundary} `)
+      .replace(leadingBoundaryHandoffActionPattern, (_match, leading: string, boundary: string, verb: string) => formatBoundaryAction(leading, boundary, verb));
+    if (removedUploadRequest) {
+      next = next
+        .replace(leadingHandoffConnectorPattern, '$1')
+        .replace(leadingHandoffActionPattern, (_match, leading: string, verb: string) => `${leading}${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}`)
+        .replace(leadingWithDetailPattern, (_match, leading: string) => `${leading}Include`);
+    }
+    return next
+      .replace(leadingCreatePattern, (_match, leading: string) => `${leading}Create`)
+      .replace(/\breference images\b/gi, 'visual targets')
+      .replace(/\breference screenshots\b/gi, 'target screenshots')
+      .replace(/\breference visuals\b/gi, 'visual targets')
+      .replace(/\breference photos\b/gi, 'target photos')
+      .replace(/\breference image\b/gi, 'visual target')
+      .replace(/\breference screenshot\b/gi, 'target screenshot')
+      .replace(/\breference visual\b/gi, 'visual target')
+      .replace(/\breference photo\b/gi, 'target photo')
+      .replace(/\bsource images\b/gi, 'visual targets')
+      .replace(/\bsource screenshots\b/gi, 'target screenshots')
+      .replace(/\bsource visuals\b/gi, 'visual targets')
+      .replace(/\bsource photos\b/gi, 'target photos')
+      .replace(/\bsource image\b/gi, 'visual target')
+      .replace(/\bsource screenshot\b/gi, 'target screenshot')
+      .replace(/\bsource visual\b/gi, 'visual target')
+      .replace(/\bsource photo\b/gi, 'target photo');
+  });
 }
 
 function normalizeUnquotedWhitespace(text: string): string {

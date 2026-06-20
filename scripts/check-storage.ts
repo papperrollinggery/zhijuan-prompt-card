@@ -426,6 +426,46 @@ const leadingUploadReferenceCommaAnalysis = {
 };
 assert.equal(getGeneratorPrompt(leadingUploadReferenceCommaAnalysis), 'Create a clean poster.');
 
+const leadingUploadReferenceKeepDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload keep detail request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image for guidance and keep the blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceKeepDetailAnalysis), 'Keep the blue haze.');
+
+const leadingUploadReferenceWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload with detail request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image for guidance with blue haze and diagonal light.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceWithDetailAnalysis), 'Include blue haze and diagonal light.');
+
+const leadingUploadReferenceCommaWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload comma with detail request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image for guidance, with blue haze and diagonal light.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceCommaWithDetailAnalysis), 'Include blue haze and diagonal light.');
+
+const leadingUploadReferenceToWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload to with detail request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image to guide composition with blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceToWithDetailAnalysis), 'Include blue haze.');
+
 const leadingUploadReferenceThenCreateAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after leading upload then create request', analysis: '' },
@@ -455,6 +495,36 @@ const provideSourceVisualsPurposeAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(provideSourceVisualsPurposeAnalysis), 'Create a clean poster.');
+
+const uploadReferenceKeepDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after upload reference with keep detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster, upload the reference image for guidance and keep the blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(uploadReferenceKeepDetailAnalysis), 'Create a clean poster and keep the blue haze.');
+
+const uploadReferenceWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after upload reference with visual detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster and upload the reference image to guide composition with blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(uploadReferenceWithDetailAnalysis), 'Create a clean poster with blue haze.');
+
+const commaUploadReferenceWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after comma upload reference with visual detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster, upload the reference image for guidance, with blue haze and diagonal light.'
+  }
+};
+assert.equal(getGeneratorPrompt(commaUploadReferenceWithDetailAnalysis), 'Create a clean poster with blue haze and diagonal light.');
 
 const leadingProvideSourceVisualsAndCreateAnalysis = {
   ...currentAnalysis,
@@ -648,6 +718,97 @@ assert.equal(
   'Text reads "source image"; use visual target glow behind the lettering.'
 );
 
+const bareTextReadsVisibleTextThenUploadWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then upload with detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; upload the reference image for guidance with rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenUploadWithDetailAnalysis),
+  'Text reads "source image"; include rim light.'
+);
+
+const bareTextReadsVisibleTextThenDirectWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then direct with detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; with rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenDirectWithDetailAnalysis),
+  'Text reads "source image"; include rim light.'
+);
+
+const bareTextReadsVisibleTextThenUploadAndKeepDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then upload and keep detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; upload the reference image for guidance and keep rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenUploadAndKeepDetailAnalysis),
+  'Text reads "source image"; keep rim light.'
+);
+
+const bareTextReadsVisibleTextThenUploadThenCreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then upload then create', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; upload the reference image then create a clean poster.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenUploadThenCreateAnalysis),
+  'Text reads "source image"; create a clean poster.'
+);
+
+const bareTextReadsVisibleTextThenUploadAndCreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then upload and create', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; upload the reference image and create a clean poster.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenUploadAndCreateAnalysis),
+  'Text reads "source image"; create a clean poster.'
+);
+
+const bareTextReadsVisibleTextThenSentenceUploadWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text sentence then upload with detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image". Upload the reference image for guidance with rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenSentenceUploadWithDetailAnalysis),
+  'Text reads "source image". Include rim light.'
+);
+
+const bareTextReadsVisibleTextThenSentenceDirectWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text sentence then direct with detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image". with rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextThenSentenceDirectWithDetailAnalysis),
+  'Text reads "source image". Include rim light.'
+);
+
 const bareTextSaysVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for bare text says visible words', analysis: '' },
@@ -659,6 +820,32 @@ const bareTextSaysVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(bareTextSaysVisibleTextAnalysis),
   'Text says "reference image"; visual target glow behind the lettering.'
+);
+
+const bareTextSaysVisibleTextThenProvideThenPreserveAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible text then provide and preserve', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text says "reference image". Provide the source visuals to guide composition then preserve blue haze.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextSaysVisibleTextThenProvideThenPreserveAnalysis),
+  'Text says "reference image". Preserve blue haze.'
+);
+
+const buttonTextVisibleTextThenUploadWithDetailAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for button text then upload with detail', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Button text reads "source image"; upload the reference image for guidance with rim light.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(buttonTextVisibleTextThenUploadWithDetailAnalysis),
+  'Button text reads "source image"; include rim light.'
 );
 
 const instructionTextSaysWrapperAnalysis = {
@@ -874,6 +1061,16 @@ const recreateOnlyHandoffAnalysis = {
 };
 assert.equal(getGeneratorPrompt(recreateOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
 
+const recreateOnlySemicolonHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'recreate this image;'
+  }
+};
+assert.equal(getGeneratorPrompt(recreateOnlySemicolonHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
 const bareRecreateOnlyHandoffAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
@@ -893,6 +1090,16 @@ const uploadOnlyHandoffAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(uploadOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const sourceImageSemicolonOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'source image;'
+  }
+};
+assert.equal(getGeneratorPrompt(sourceImageSemicolonOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
 
 const sortedJsonPrompt = {
   ...Object.fromEntries(Object.entries(currentAnalysis.json_prompt).sort(([left], [right]) => left.localeCompare(right))),
