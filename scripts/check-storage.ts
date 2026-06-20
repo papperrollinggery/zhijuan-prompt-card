@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { DEFAULT_SETTINGS } from '../src/shared/defaults';
-import { getHistoryPrompt } from '../src/shared/historyDisplay';
+import { getGeneratorPrompt, getHistoryPrompt, stringifyJsonPrompt, stringifyPromptAnalysis } from '../src/shared/historyDisplay';
 import { addHistoryEntry, buildHistoryTitle, clearHistory, compactHistoryStorage, createRunningHistoryEntry, getHistory, getSettings, saveSettings, updateHistoryEntry } from '../src/shared/storage';
 
 const settings = await getSettings();
@@ -61,7 +61,16 @@ assert.equal(getHistoryPrompt({
   favorite: false,
   status: 'success',
   analysis: legacyAnalysis
-}), 'Legacy precise reconstruction prompt with more detail');
+}), 'new shorter English prompt');
+
+const trueLegacyAnalysis = {
+  ...legacyAnalysis,
+  json_prompt: {
+    ...legacyAnalysis.json_prompt,
+    generation_prompt: '   '
+  }
+};
+assert.equal(getGeneratorPrompt(trueLegacyAnalysis), 'Legacy precise reconstruction prompt with more detail');
 
 const currentAnalysis = {
   ...legacyAnalysis,
@@ -76,7 +85,65 @@ assert.equal(getHistoryPrompt({
   favorite: false,
   status: 'success',
   analysis: currentAnalysis
-}, 'zh'), 'Primary English recreation prompt for generators');
+}, 'zh'), 'new shorter English prompt');
+
+const handoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2. Recreate a source image with layered blue haze and visible Chinese UI text. Please recreate blue poster with reference image energy.'
+  }
+};
+const handoffPrompt = getGeneratorPrompt(handoffAnalysis);
+assert.equal(handoffPrompt, 'Create a visual target with layered blue haze and visible Chinese UI text. Please create blue poster with visual target energy.');
+assert(!handoffPrompt.includes('schema_version'));
+assert(!handoffPrompt.includes('reconstruction_v2'));
+assert(!/source image|reference image|recreate/i.test(handoffPrompt));
+
+const schemaOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after schema-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2'
+  }
+};
+assert.equal(getGeneratorPrompt(schemaOnlyHandoffAnalysis), 'Fallback English prompt after schema-only generator field');
+
+const sortedJsonPrompt = {
+  ...Object.fromEntries(Object.entries(currentAnalysis.json_prompt).sort(([left], [right]) => left.localeCompare(right))),
+  global_fingerprint: Object.fromEntries(
+    Object.entries(currentAnalysis.json_prompt.global_fingerprint).sort(([left], [right]) => left.localeCompare(right))
+  )
+} as typeof currentAnalysis.json_prompt;
+const canonicalJsonPrompt = stringifyJsonPrompt(sortedJsonPrompt);
+assert(canonicalJsonPrompt.indexOf('"schema_version"') < canonicalJsonPrompt.indexOf('"action_pose"'));
+assert(canonicalJsonPrompt.indexOf('"style_index"') < canonicalJsonPrompt.indexOf('"palette"'));
+const canonicalAnalysis = stringifyPromptAnalysis({ ...currentAnalysis, json_prompt: sortedJsonPrompt });
+assert(canonicalAnalysis.indexOf('"json_prompt"') < canonicalAnalysis.indexOf('"prompt_core"'));
+assert(canonicalAnalysis.indexOf('"schema_version"') < canonicalAnalysis.indexOf('"action_pose"'));
+
+const legacyJsonOnlyAnalysis = {
+  zh: { prompt: '旧中文提示', analysis: '' },
+  en: { prompt: 'Old English prompt', analysis: '' },
+  zh_style_tags: [],
+  en_style_tags: [],
+  json_prompt: {
+    schema_version: 'reconstruction_v1',
+    summary: 'legacy summary',
+    subject: 'legacy subject'
+  },
+  prompt_core: '',
+  negative_prompt: '',
+  recreation_prompt: 'legacy duplicate should not be exported'
+};
+const legacyJsonText = stringifyPromptAnalysis(legacyJsonOnlyAnalysis as never);
+const legacyJson = JSON.parse(legacyJsonText);
+assert.equal(legacyJson.json_prompt.schema_version, 'reconstruction_v1');
+assert.equal(legacyJson.json_prompt.summary, 'legacy summary');
+assert.equal(legacyJson.json_prompt.global_fingerprint, undefined);
+assert.equal(legacyJson.recreation_prompt, undefined);
 
 await clearHistory();
 await addHistoryEntry(createRunningHistoryEntry({ title: 'Check image' }));

@@ -28,8 +28,10 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 5. Confirm the English tab shows one primary copyable recreation prompt.
 6. Confirm the JSON tab contains `schema_version: "reconstruction_v2"`.
 7. Confirm JSON contains `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics`.
-8. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
-9. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
+8. Confirm normal prompt copy and Open in generator use `json_prompt.generation_prompt` text, not the full JSON object.
+9. Confirm pasted generator text does not include `schema_version`, `reconstruction_v2`, `source image`, or `reference image`.
+10. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
+11. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
 
 ## Local Image Upload
 
@@ -40,6 +42,7 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 5. Confirm `negative_prompt` is image-specific and does not globally ban blur, haze, bloom, grain, or low resolution when those are visible source traits.
 6. Confirm the JSON output uses dynamic observation units rather than a fixed image-type template.
 7. If the source image has motion, floating, suspension, occlusion, or layered depth, confirm those relationships appear in `json_prompt.generation_prompt` and `json_prompt.spatial_dynamics`, not only inside array fields.
+8. Confirm full JSON copying remains available only through the explicit structure JSON controls.
 
 ## Pass Criteria
 

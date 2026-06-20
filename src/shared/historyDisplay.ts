@@ -1,19 +1,117 @@
-import type { HistoryEntry, InterfaceLanguage } from './types';
+import type { HistoryEntry, InterfaceLanguage, PromptAnalysis } from './types';
 
 export type HistoryDisplayLanguage = 'zh' | 'en';
+
+const jsonPromptKeyOrder: Array<keyof PromptAnalysis['json_prompt']> = [
+  'schema_version',
+  'summary',
+  'subject',
+  'action_pose',
+  'details_appearance',
+  'environment_background',
+  'lighting_atmosphere',
+  'composition_framing',
+  'style_camera',
+  'aspect_ratio',
+  'likely_generation_intent',
+  'colors',
+  'materials',
+  'quality_modifiers',
+  'fidelity_priorities',
+  'global_fingerprint',
+  'observation_units',
+  'text_elements',
+  'reconstruction_priorities',
+  'spatial_dynamics',
+  'generation_prompt',
+  'generation_negative_prompt'
+];
+
+const globalFingerprintKeyOrder: Array<keyof PromptAnalysis['json_prompt']['global_fingerprint']> = [
+  'style_index',
+  'density',
+  'spatial_flow',
+  'optical_finish',
+  'render_finish',
+  'palette'
+];
+
+const observationUnitKeyOrder: Array<keyof PromptAnalysis['json_prompt']['observation_units'][number]> = [
+  'id',
+  'kind',
+  'priority',
+  'prompt',
+  'evidence',
+  'location',
+  'must_preserve',
+  'avoid_drift'
+];
+
+const textElementKeyOrder: Array<keyof PromptAnalysis['json_prompt']['text_elements'][number]> = [
+  'content',
+  'language',
+  'role',
+  'location',
+  'typography',
+  'legibility',
+  'priority'
+];
+
+const reconstructionPriorityKeyOrder: Array<keyof PromptAnalysis['json_prompt']['reconstruction_priorities'][number]> = [
+  'cue',
+  'priority',
+  'tradeoff',
+  'compile_to_en_prompt',
+  'risk_if_missing'
+];
 
 export function normalizeHistoryLanguage(language: InterfaceLanguage): HistoryDisplayLanguage {
   return language === 'zh' ? 'zh' : 'en';
 }
 
 export function getHistoryPrompt(entry: HistoryEntry, language: InterfaceLanguage | HistoryDisplayLanguage = 'en'): string {
-  const legacyAnalysis = entry.analysis as (HistoryEntry['analysis'] & { recreation_prompt?: string }) | undefined;
-  return (
-    legacyAnalysis?.recreation_prompt ||
-    entry.analysis?.en.prompt ||
-    entry.analysis?.zh.prompt ||
-    ''
+  return getGeneratorPrompt(entry.analysis);
+}
+
+export function getGeneratorPrompt(analysis?: PromptAnalysis): string {
+  const legacyAnalysis = analysis as (PromptAnalysis & { recreation_prompt?: string }) | undefined;
+  return firstSanitizedPrompt(
+    analysis?.json_prompt?.generation_prompt,
+    legacyAnalysis?.recreation_prompt,
+    analysis?.en.prompt,
+    analysis?.zh.prompt
   );
+}
+
+export function stringifyJsonPrompt(jsonPrompt: PromptAnalysis['json_prompt'] | undefined): string {
+  const ordered = orderKnownKeys(toRecord(jsonPrompt), jsonPromptKeyOrder);
+  if (isRecord(ordered.global_fingerprint)) {
+    ordered.global_fingerprint = orderKnownKeys(ordered.global_fingerprint, globalFingerprintKeyOrder);
+  }
+  if (Array.isArray(ordered.observation_units)) {
+    ordered.observation_units = ordered.observation_units.map((unit) => orderKnownKeysIfRecord(unit, observationUnitKeyOrder));
+  }
+  if (Array.isArray(ordered.text_elements)) {
+    ordered.text_elements = ordered.text_elements.map((element) => orderKnownKeysIfRecord(element, textElementKeyOrder));
+  }
+  if (Array.isArray(ordered.reconstruction_priorities)) {
+    ordered.reconstruction_priorities = ordered.reconstruction_priorities.map((priority) => orderKnownKeysIfRecord(priority, reconstructionPriorityKeyOrder));
+  }
+  return JSON.stringify(ordered, null, 2);
+}
+
+export function stringifyPromptAnalysis(analysis: PromptAnalysis): string {
+  const source = toRecord(analysis);
+  const ordered: Record<string, unknown> = {};
+  const knownKeys = ['zh', 'en', 'zh_style_tags', 'en_style_tags', 'json_prompt', 'prompt_core', 'negative_prompt'];
+  for (const key of knownKeys) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+    ordered[key] = key === 'json_prompt' ? JSON.parse(stringifyJsonPrompt(source[key] as PromptAnalysis['json_prompt'])) : source[key];
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (!knownKeys.includes(key) && key !== 'recreation_prompt') ordered[key] = value;
+  }
+  return JSON.stringify(ordered, null, 2);
 }
 
 export function getHistoryPreviewText(entry: HistoryEntry, language: InterfaceLanguage | HistoryDisplayLanguage = 'en'): string {
@@ -61,4 +159,55 @@ export function getVisualHistoryEntries(entries: HistoryEntry[], limit = 8): His
     }
   });
   return [...withImages, ...withoutImages].slice(0, limit);
+}
+
+function orderKnownKeys(value: Record<string, unknown>, keyOrder: readonly string[]): Record<string, unknown> {
+  const ordered: Record<string, unknown> = {};
+  const knownKeys = new Set<string>(keyOrder.map(String));
+  for (const key of keyOrder) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) ordered[String(key)] = value[String(key)];
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (!knownKeys.has(key)) ordered[key] = item;
+  }
+  return ordered;
+}
+
+function orderKnownKeysIfRecord(value: unknown, keyOrder: readonly string[]): unknown {
+  return isRecord(value) ? orderKnownKeys(value, keyOrder) : value;
+}
+
+function firstSanitizedPrompt(...prompts: Array<string | undefined>): string {
+  for (const prompt of prompts) {
+    const sanitized = sanitizeGeneratorPromptText(prompt || '');
+    if (sanitized) return sanitized;
+  }
+  return '';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function sanitizeGeneratorPromptText(prompt: string): string {
+  return prompt
+    .trim()
+    .replace(/"?schema_version"?\s*:\s*"?reconstruction_v2"?[,.]?\s*/gi, '')
+    .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
+    .replace(/^\s*recreate\s+(an?|the)\s+/i, (_match, article: string) => `Create ${article} `)
+    .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
+    .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
+    .replace(/\brecreate\b/gi, 'create')
+    .replace(/\breference image\b/gi, 'visual target')
+    .replace(/\bsource image\b/gi, 'visual target')
+    .replace(/\bsource screenshot\b/gi, 'target screenshot')
+    .replace(/\bsource visual\b/gi, 'visual target')
+    .replace(/\bthe source\b/gi, 'the target')
+    .replace(/\bthis source\b/gi, 'this target')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

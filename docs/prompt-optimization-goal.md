@@ -21,8 +21,8 @@ A prompt optimization is ready only when all of these are true:
 
 - `REVERSE_PROMPT_SYSTEM` still asks for valid JSON only.
 - The top-level JSON shape still matches `PromptAnalysis`.
-- `en.prompt` is treated as the primary generation prompt.
-- `json_prompt.generation_prompt`, `json_prompt.generation_negative_prompt`, and `json_prompt.spatial_dynamics` make the JSON tab self-contained enough to copy into image generators without losing load-bearing motion, z-depth, contact, support, floating, or occlusion relationships.
+- `json_prompt.generation_prompt` is treated as the strongest generator handoff prompt, with `en.prompt` kept as the natural-language English fallback.
+- `json_prompt.generation_prompt`, `json_prompt.generation_negative_prompt`, and `json_prompt.spatial_dynamics` make the JSON data self-contained without requiring users to paste the full schema object into image generators.
 - The prompt contract starts from faithful observation, then activates only the constraints that help reconstruct the current image.
 - `json_prompt.schema_version` is `reconstruction_v2` for new model output, while legacy JSON fields stay populated for compatibility.
 - `json_prompt.global_fingerprint`, `json_prompt.observation_units`, `json_prompt.text_elements`, and `json_prompt.reconstruction_priorities` carry a dynamic reconstruction evidence layer without forcing image-type-specific templates.
@@ -126,7 +126,7 @@ The simulation does not call external models. It validates the prompt output sha
 - style_index, medium, camera/lens cue, and material/texture locks preserved when relevant
 - fidelity priorities preserved as plain-language 0-100 reconstruction priorities and compiled into the English prompt when they affect reconstruction
 - dynamic reconstruction evidence preserved through `global_fingerprint`, `observation_units`, `text_elements`, and `reconstruction_priorities`
-- JSON-local `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics` preserve the same load-bearing facts when a user copies the JSON tab directly
+- JSON-local `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics` preserve the same load-bearing facts when a user copies the generator prompt from stored JSON data
 - JSON-local negative prompt compiles high-priority drift blockers from the evidence layer instead of trusting item count alone
 - source-defining reconstruction skeleton and boundary clarity compiled into early `en.prompt` only when they are load-bearing
 - simple images remain compact and are not forced into dense multi-region analysis
