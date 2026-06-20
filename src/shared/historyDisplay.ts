@@ -182,9 +182,15 @@ function orderKnownKeysIfRecord(value: unknown, keyOrder: readonly string[]): un
 function firstSanitizedPrompt(...prompts: Array<string | undefined>): string {
   for (const prompt of prompts) {
     const sanitized = sanitizeGeneratorPromptText(prompt || '');
-    if (sanitized) return sanitized;
+    if (sanitized && !isGenericHandoffFiller(sanitized)) return sanitized;
   }
   return '';
+}
+
+function isGenericHandoffFiller(prompt: string): boolean {
+  const normalized = prompt.trim().replace(/[.!]+$/, '').toLowerCase();
+  if (!normalized) return true;
+  return /^(?:visual targets?|target screenshots?|target photos?|create|create the described (?:image|target))$/.test(normalized);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -268,16 +274,28 @@ function startsWithVisibleSchemaContinuation(text: string): boolean {
 
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
   return transformVisibleTextRuns(prompt, (segment) => segment
+    .replace(/(?:\s+and\s+|,\s+)(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b(?:\s+(?:for|as)\s+[^.;,\n]+|\s+to\s+(?:(?!\s+(?:and|then)\s+create\b)[^.;,\n])+)?/gi, '')
+    .replace(/\b(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b(?:\s+(?:for|as)\s+[^.;,\n]+|\s+to\s+(?:(?!\s+(?:and|then)\s+create\b)[^.;,\n])+)?(?:,\s*)?/gi, '')
     .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
     .replace(/^(\s*)recreate\s+(an?|the)\s+/i, (_match, leading: string, article: string) => `${leading}Create ${article} `)
     .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
     .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
     .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
     .replace(/\brecreate\b/gi, 'create')
+    .replace(/^(\s*)(?:then|and)\s+(?=create\b)/i, '$1')
+    .replace(/^(\s*)create\b/i, (_match, leading: string) => `${leading}Create`)
+    .replace(/\breference images\b/gi, 'visual targets')
+    .replace(/\breference screenshots\b/gi, 'target screenshots')
+    .replace(/\breference visuals\b/gi, 'visual targets')
+    .replace(/\breference photos\b/gi, 'target photos')
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\breference screenshot\b/gi, 'target screenshot')
     .replace(/\breference visual\b/gi, 'visual target')
     .replace(/\breference photo\b/gi, 'target photo')
+    .replace(/\bsource images\b/gi, 'visual targets')
+    .replace(/\bsource screenshots\b/gi, 'target screenshots')
+    .replace(/\bsource visuals\b/gi, 'visual targets')
+    .replace(/\bsource photos\b/gi, 'target photos')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
     .replace(/\bsource visual\b/gi, 'visual target')
@@ -329,13 +347,14 @@ function sanitizeQuotedWrapperTerms(segment: string): string {
 
 const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels?)|(?:ui|code)\s+label\s+text|(?:ui|code)\s+labels?|(?:shirt|screen|poster|button|label|sign|logo|watermark|caption|heading|headline)\s+text|title|labels?|caption|logo|watermark|sign|shirt|heading|headline|button`;
 const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says|displays|shows)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
+const bareVisibleTextMarkerSource = String.raw`(?:^|[.;\n]\s*)text\s+(?:reads|says|displays|shows)\s+`;
 const visibleSchemaMarkerSource = String.raw`schema_version\s*:\s*reconstruction_v2\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
 const visibleQuotedSchemaMarkerSource = String.raw`\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}?\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
-const visibleTextMarkerPattern = new RegExp(String.raw`(?:\b(?:${visibleTextMarkerSource}|${visibleSchemaMarkerSource})|${visibleQuotedSchemaMarkerSource})`, 'gi');
+const visibleTextMarkerPattern = new RegExp(String.raw`(?:${bareVisibleTextMarkerSource}|\b(?:${visibleTextMarkerSource}|${visibleSchemaMarkerSource})|${visibleQuotedSchemaMarkerSource})`, 'gi');
 const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|crop|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
 const wrapperContinuationEndSource = String.raw`(?:\s+(?:as|for))?${wrapperContinuationTailSource}`;
 const wrapperActionContinuationEndSource = String.raw`(?:${wrapperContinuationEndSource}|(?=\s*[.;,\n]|$))`;
-const wrapperNounSource = String.raw`(?:image|screenshot|visual|photo)`;
+const wrapperNounSource = String.raw`(?:images?|screenshots?|visuals?|photos?)`;
 const wrapperActionContinuationSource = String.raw`(?:use|using|match|matching)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperActionContinuationEndSource}`;
 const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|${wrapperActionContinuationSource})|\s+recreate\b)`, 'i');
 const commaWrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|\s+(?:(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|${wrapperActionContinuationSource})|\s+recreate\b)`, 'i');
@@ -361,6 +380,14 @@ function transformVisibleTextRuns(text: string, transform: (segment: string) => 
 
 function findVisibleTextRunEnd(text: string, start: number): number {
   for (let i = start; i < text.length; i += 1) {
+    const closer = quoteCloserAt(text, i);
+    if (closer) {
+      const endQuoteIndex = findClosingQuoteIndex(text, closer, i + 1);
+      if (endQuoteIndex !== -1) {
+        i = endQuoteIndex;
+        continue;
+      }
+    }
     if (/[.;\n]/.test(text[i])) return i + 1;
     if (text[i] === ',' && startsWithCommaWrapperContinuation(text, i + 1)) return i + 1;
     if (startsWithAndWrapperContinuation(text, i)) return i;

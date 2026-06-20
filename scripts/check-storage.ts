@@ -127,6 +127,19 @@ assert.equal(
   'Poster title reads "Recreate Yourself" and code label reads "schema_version: reconstruction_v2"; visual target glow around the text.'
 );
 
+const punctuatedQuotedVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for punctuated quoted visible text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads "source image. reference image"; use source image glow.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(punctuatedQuotedVisibleTextAnalysis),
+  'Poster title reads "source image. reference image"; use visual target glow.'
+);
+
 const quotedSchemaValueWrapperAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after quoted wrapper value', analysis: '' },
@@ -373,6 +386,99 @@ assert.equal(
   'Use the target photo lighting and match the target photo crop.'
 );
 
+const uploadReferenceImageAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after upload reference request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster and upload the reference image.'
+  }
+};
+assert.equal(getGeneratorPrompt(uploadReferenceImageAnalysis), 'Create a clean poster.');
+
+const uploadReferenceImagesPurposeAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after upload reference images purpose request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster and upload the reference images for guidance.'
+  }
+};
+assert.equal(getGeneratorPrompt(uploadReferenceImagesPurposeAnalysis), 'Create a clean poster.');
+
+const attachSourcePhotosCommaAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after attach source photos comma request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster, please attach source photos.'
+  }
+};
+assert.equal(getGeneratorPrompt(attachSourcePhotosCommaAnalysis), 'Create a clean poster.');
+
+const leadingUploadReferenceCommaAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload comma request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image, create a clean poster.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceCommaAnalysis), 'Create a clean poster.');
+
+const leadingUploadReferenceThenCreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload then create request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image then create a clean poster.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceThenCreateAnalysis), 'Create a clean poster.');
+
+const leadingUploadReferenceAndCreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading upload and create request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image and create a clean poster.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingUploadReferenceAndCreateAnalysis), 'Create a clean poster.');
+
+const provideSourceVisualsPurposeAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after provide source visuals purpose request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster and provide the source visuals to guide composition.'
+  }
+};
+assert.equal(getGeneratorPrompt(provideSourceVisualsPurposeAnalysis), 'Create a clean poster.');
+
+const leadingProvideSourceVisualsAndCreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after leading provide source visuals and create request', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Provide the source visuals to guide composition and create a clean poster.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingProvideSourceVisualsAndCreateAnalysis), 'Create a clean poster.');
+
+const pluralReferenceImagesAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after plural reference images', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use the reference images as lighting guidance with source photos nearby.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(pluralReferenceImagesAnalysis),
+  'Use the visual targets as lighting guidance with target photos nearby.'
+);
+
 const unquotedVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for unquoted visible text', analysis: '' },
@@ -529,6 +635,45 @@ assert.equal(
   'Visible labels: "source image" and "reference image"; use visual target glow behind the lettering.'
 );
 
+const bareTextReadsVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for bare text reads visible words', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text reads "source image"; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextReadsVisibleTextAnalysis),
+  'Text reads "source image"; use visual target glow behind the lettering.'
+);
+
+const bareTextSaysVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for bare text says visible words', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Text says "reference image"; source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bareTextSaysVisibleTextAnalysis),
+  'Text says "reference image"; visual target glow behind the lettering.'
+);
+
+const instructionTextSaysWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for non-visible instruction text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'The instruction text says use source image lighting.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(instructionTextSaysWrapperAnalysis),
+  'The instruction text says use visual target lighting.'
+);
+
 const displaysShowsVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for displays/shows visible labels', analysis: '' },
@@ -615,7 +760,7 @@ const quotedWholePromptWrapperAnalysis = {
     generation_prompt: '"Recreate this image with source image glow."'
   }
 };
-assert.equal(getGeneratorPrompt(quotedWholePromptWrapperAnalysis), '"create the described image with visual target glow."');
+assert.equal(getGeneratorPrompt(quotedWholePromptWrapperAnalysis), '"Create the described image with visual target glow."');
 
 const quotedWholePromptSchemaWrapperAnalysis = {
   ...currentAnalysis,
@@ -698,6 +843,56 @@ const semicolonSchemaOnlyHandoffAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(semicolonSchemaOnlyHandoffAnalysis), 'Fallback English prompt after semicolon schema-only generator field');
+
+const sourceImageOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'source image'
+  }
+};
+assert.equal(getGeneratorPrompt(sourceImageOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const referenceImageOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'reference image'
+  }
+};
+assert.equal(getGeneratorPrompt(referenceImageOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const recreateOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'recreate this image'
+  }
+};
+assert.equal(getGeneratorPrompt(recreateOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const bareRecreateOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'recreate'
+  }
+};
+assert.equal(getGeneratorPrompt(bareRecreateOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const uploadOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Upload the reference image for guidance.'
+  }
+};
+assert.equal(getGeneratorPrompt(uploadOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
 
 const sortedJsonPrompt = {
   ...Object.fromEntries(Object.entries(currentAnalysis.json_prompt).sort(([left], [right]) => left.localeCompare(right))),
