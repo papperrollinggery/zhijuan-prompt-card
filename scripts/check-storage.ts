@@ -150,6 +150,16 @@ assert.equal(
   '"schema_version": "reconstruction_v2" appears as a visible code label at the top; visual target glow behind it.'
 );
 
+const leadingQuotedSchemaWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted schema wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"schema_version": "reconstruction_v2". Create a clean poster with source image glow.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingQuotedSchemaWrapperAnalysis), 'Create a clean poster with visual target glow.');
+
 const leadingBracedSchemaVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for braced visible schema text', analysis: '' },
@@ -265,6 +275,19 @@ assert.equal(
   'The source of the backlight is behind the subject; use visual target glow around the silhouette.'
 );
 
+const referenceScreenshotWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for reference screenshot wrappers', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use reference screenshot lighting and match the reference visual palette; source screenshot glow remains.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(referenceScreenshotWrapperAnalysis),
+  'Use target screenshot lighting and match the visual target palette; target screenshot glow remains.'
+);
+
 const unquotedVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for unquoted visible text', analysis: '' },
@@ -367,6 +390,32 @@ const commaSourceImageLabVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(commaSourceImageLabVisibleTextAnalysis),
   'Poster title reads SOURCE IMAGE, REFERENCE IMAGE LAB; use visual target glow behind the lettering.'
+);
+
+const colonVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for colon visible source text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Visible text: "source image" and label: "reference image"; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(colonVisibleTextAnalysis),
+  'Visible text: "source image" and label: "reference image"; use visual target glow behind the lettering.'
+);
+
+const pluralColonVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for plural colon visible labels', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Visible labels: "source image" and "reference image"; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(pluralColonVisibleTextAnalysis),
+  'Visible labels: "source image" and "reference image"; use visual target glow behind the lettering.'
 );
 
 const visibleTextWithReferenceWrapperAnalysis = {

@@ -29,6 +29,23 @@
 - `Release / ship-documentation`: handles changelog, release notes, update notices, and public wording without exposing internal prompt mechanics.
 - `Loop steward`: tracks repeated failures, stale workers, unresolved decisions, and cleanup. The CEO/control thread owns this unless explicitly delegated.
 
+### Gstack Skill Mapping
+
+- Use `/plan-ceo-review` semantics for premise, scope, acceptance criteria, alternatives, and explicit user approval before adding scope.
+- Use `/plan-eng-review` semantics for architecture, contracts, affected files, test strategy, rollback risk, and reuse of existing project patterns.
+- Use `/review` and `/codex` semantics for independent adversarial review of the final diff, especially LLM trust-boundary and prompt-handoff behavior.
+- Use `/qa` semantics for targeted regression first, then broader checks. Browser or UI evidence is required when the change affects visible extension behavior.
+- Use `/ship` semantics for branch, PR, GitHub checks, cloud Codex/GitHub review, and merge gating. PR merge always requires explicit user approval.
+- If a sub-skill requirement conflicts with this project file, follow the stricter rule and record the reason in the CEO/control thread.
+
+### Adversarial Council Mode
+
+- Run the full council when the user asks for gstack/thread discipline, when behavior crosses the prompt trust boundary, when repeated review feedback appears, when UI-visible handoff behavior changes, before a ship/PR decision after a meaningful diff, or when branch/worktree/merge risk is non-trivial.
+- The minimum council roles are `Real user`, `Developer`, `CTO`, `Cold reviewer`, `UI/UX architect`, and `Product manager`. Add `Release` only when public wording, changelog, update notices, or GitHub release content changes.
+- Each council worker must be read-only unless explicitly assigned an isolated worktree. Its report must include `STATUS`, blocker findings or PASS rationale, evidence commands or paths, and unresolved risks.
+- Do not blindly rerun the full council for tiny mechanical follow-up changes after a clean council pass. For those deltas, run targeted QA plus cold review, and state why the reduced review is sufficient.
+- No council report is authoritative by itself. The CEO/control thread merges conclusions, resolves disagreements, verifies the final workspace state, and archives the worker threads.
+
 ### Execution Sequence
 
 1. Define the goal and acceptance criteria before edits. For prompt-handoff work, acceptance must state what text reaches external generators and what remains structure-only JSON.
@@ -67,6 +84,14 @@
 - If cloud review requests changes, fix them on the same branch, rerun local gates, rerun the relevant Codex thread/cold-review pass, push an update, and wait for review again.
 - Merge only after the PR has passing required checks, no unresolved cloud Codex/GitHub review blockers, and explicit user approval to merge.
 
+### Cloud Feedback Loop
+
+- Treat each cloud Codex/GitHub review comment as a failing test case until proved otherwise.
+- Reduce repeated feedback to the smallest reproducible unit: exact input text, expected generator-facing prompt, and the function or contract that owns the behavior.
+- Add or update a targeted regression before or with the fix. Then rerun the targeted check, broader local gates, and the relevant delta review.
+- If the same issue class appears twice, freeze the loop, map the contract again, and ask whether the current architecture is still the smallest correct approach before patching more variants.
+- Do not request another cloud review until the pushed branch contains all local fixes, local gates pass, and stale worker threads from the prior review round are archived.
+
 ## Loop Engineering
 
 - Split work into independently verifiable units: contract, implementation, tests, UI copy, docs, QA, and cold review.
@@ -74,3 +99,12 @@
 - Stop and reassess if the same diagnostic, same file, or same failed fix repeats without progress. Freeze the loop, reduce to the failing unit, then resume.
 - Prefer durable project rules over memory. If a repeated workflow failure is found, update `AGENTS.md` or a project script so the next run does not rely on recall.
 - Worker-thread reports are loop inputs, not truth. The CEO/control thread decides, edits or merges, verifies, archives completed workers, and marks the goal complete only after the evidence matches the acceptance criteria.
+
+## Execution Plane Audit
+
+- Before reporting `DONE`, run `git status --short` and confirm only intentional files are staged or committed. Unrelated untracked assets must remain unstaged.
+- Confirm every worker thread report has been read and merged into the CEO/control thread's truth state.
+- Archive worker threads that are merged, stale, dead, obsolete, failed, or superseded. A clean finish should leave only the CEO/control thread active for the task.
+- Confirm the local branch, pushed branch, PR head SHA, and latest cloud review target the same commit.
+- Confirm local gates and required GitHub checks are passing or explicitly report `NEEDS_CONTEXT`/`BLOCKED`.
+- Confirm no PR merge has happened unless the user explicitly approved the merge after the final checks.

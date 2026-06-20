@@ -208,7 +208,7 @@ function stripLeadingSchemaWrapper(prompt: string): string {
   let previous = '';
   while (next !== previous) {
     previous = next;
-    next = stripLeadingBracedSchemaWrapper(next)
+    next = stripLeadingQuotedSchemaWrapper(stripLeadingBracedSchemaWrapper(next))
       .replace(/^\s*\{?\s*schema_version\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
       .replace(/^\s*schema_version\s*:\s*reconstruction_v2[,.]?\s*/i, '')
       .trimStart();
@@ -218,6 +218,19 @@ function stripLeadingSchemaWrapper(prompt: string): string {
 
 function stripLeadingBracedSchemaWrapper(prompt: string): string {
   const match = prompt.match(/^\s*\{\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}\s*/i);
+  if (!match) return prompt;
+  const rest = prompt.slice(match[0].length);
+  if (!rest) return '';
+  const separator = rest.match(/^[,.]\s*/);
+  if (separator) {
+    const afterSeparator = rest.slice(separator[0].length);
+    return startsWithVisibleSchemaContinuation(afterSeparator) ? prompt : afterSeparator;
+  }
+  return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
+}
+
+function stripLeadingQuotedSchemaWrapper(prompt: string): string {
+  const match = prompt.match(/^\s*"schema_version"\s*:\s*"reconstruction_v2"\s*/i);
   if (!match) return prompt;
   const rest = prompt.slice(match[0].length);
   if (!rest) return '';
@@ -242,6 +255,8 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
     .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
     .replace(/\brecreate\b/gi, 'create')
     .replace(/\breference image\b/gi, 'visual target')
+    .replace(/\breference screenshot\b/gi, 'target screenshot')
+    .replace(/\breference visual\b/gi, 'visual target')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
     .replace(/\bsource visual\b/gi, 'visual target'));
@@ -281,13 +296,15 @@ function sanitizeQuotedWrapperTermsOutsideVisibleText(text: string): string {
 function sanitizeQuotedWrapperTerms(segment: string): string {
   return segment
     .replace(/\breference image\b/gi, 'visual target')
+    .replace(/\breference screenshot\b/gi, 'target screenshot')
+    .replace(/\breference visual\b/gi, 'visual target')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
     .replace(/\bsource visual\b/gi, 'visual target');
 }
 
-const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+text|title|label|caption|logo|watermark|sign|shirt|heading|headline|button|code\s+label|ui\s+label|shirt\s+text|screen\s+text|poster\s+text`;
-const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says)|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
+const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels?)|title|labels?|caption|logo|watermark|sign|shirt|heading|headline|button|code\s+labels?|ui\s+labels?|shirt\s+text|screen\s+text|poster\s+text`;
+const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
 const visibleTextMarkerPattern = new RegExp(String.raw`\b${visibleTextMarkerSource}`, 'gi');
 const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
 const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
