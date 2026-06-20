@@ -129,7 +129,8 @@ const contractChecks = [
   ['source blur is not blocked globally', 'Do not put blur, grain, haze, bloom, low resolution'],
   ['soft-source blockers target polish drift', 'over-sharpened face, glossy AI skin, hyper-detailed eyes'],
   ['cleanliness guidance is conditional', 'For genuinely clean/smooth/high-clarity sources'],
-  ['generator syntax blocked', 'Do not include generator-specific syntax']
+  ['generator syntax blocked', 'Do not include generator-specific syntax'],
+  ['JSON generation prompt generator syntax blocked', 'json_prompt.generation_prompt, json_prompt.generation_negative_prompt']
 ];
 
 const forbiddenSystemPatterns = [

@@ -195,20 +195,58 @@ function isGenericHandoffFiller(prompt: string): boolean {
 
 const handoffActionVerbSource = String.raw`(?:create|keep|preserve|retain|include|use|maintain|render|show|depict)`;
 const uploadRequestTailSource = String.raw`(?:\s+(?:for|as|to)\s+(?:(?!\s+(?:and|then)\s+${handoffActionVerbSource}\b|\s+with\b)[^.;,\n])+)?`;
-const uploadReferenceRequestSource = String.raw`(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:images?|screenshots?|visuals?|photos?)\b${uploadRequestTailSource}`;
-const joinedUploadReferenceRequestPattern = new RegExp(String.raw`(?:\s+and\s+|,\s+)${uploadReferenceRequestSource}`, 'gi');
+const referenceVisualNounSource = String.raw`(?:images?|screenshots?|visuals?|photos?)`;
+const referenceInputObjectNounSource = String.raw`(?:${referenceVisualNounSource}|references?)`;
+const referenceRoleSource = String.raw`(?:(?:an?|the)\s+)?references?`;
+const bareReferenceObjectSource = String.raw`references?\b(?!\s+${referenceVisualNounSource})`;
+const uploadReferenceObjectSource = String.raw`(?:(?:source|reference)\s+${referenceVisualNounSource}|uploaded\s+(?:(?:source|reference)\s+)?${referenceInputObjectNounSource}|${referenceVisualNounSource}\s+as\s+${referenceRoleSource}|${bareReferenceObjectSource})`;
+const uploadReferenceRequestSource = String.raw`(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?${uploadReferenceObjectSource}\b${uploadRequestTailSource}`;
+const referenceContextNounSource = String.raw`(?:(?:this|that|these|those)\s+|(?:(?:an?\s+|the\s+)?uploaded\s+))(?:source\s+|reference\s+)?${referenceInputObjectNounSource}`;
+const bareReferenceInputNounSource = String.raw`(?:an?\s+|the\s+)?${referenceVisualNounSource}\s+as\s+${referenceRoleSource}`;
+const bareReferenceInputObjectSource = String.raw`(?:an?\s+|the\s+)?${bareReferenceObjectSource}`;
+const referenceInputRequestSource = String.raw`(?:please\s+)?(?:use|using)\s+(?:${referenceContextNounSource}\b(?:\s+as\s+${referenceRoleSource})?|${bareReferenceInputNounSource}\b|${bareReferenceInputObjectSource}\b)${uploadRequestTailSource}`;
+const inputRequestSource = String.raw`(?:${uploadReferenceRequestSource}|${referenceInputRequestSource})`;
+const joinedInputRequestConnectorSource = String.raw`(?:\s+(?:and|then)\s+|,\s+)`;
+const joinedUploadReferenceRequestPattern = new RegExp(String.raw`${joinedInputRequestConnectorSource}${uploadReferenceRequestSource}`, 'gi');
+const joinedReferenceInputRequestPattern = new RegExp(String.raw`${joinedInputRequestConnectorSource}${referenceInputRequestSource}`, 'gi');
+const inlineReferenceInputRequestPattern = new RegExp(String.raw`\s+${referenceInputRequestSource}`, 'gi');
 const leadingUploadReferenceRequestPattern = new RegExp(String.raw`\b${uploadReferenceRequestSource}(?:,\s*)?`, 'gi');
+const leadingReferenceInputRequestPattern = new RegExp(String.raw`\b${referenceInputRequestSource}(?:,\s*)?`, 'gi');
+const detachedInputRequestBoundaryPattern = new RegExp(String.raw`^\s*(?:,\s*|\s+(?:and|then)\s+)${inputRequestSource}`, 'i');
 const leadingHandoffConnectorPattern = new RegExp(String.raw`^(\s*)(?:then|and)\s+(?=${handoffActionVerbSource}\b)`, 'i');
 const leadingHandoffActionPattern = new RegExp(String.raw`^(\s*)(${handoffActionVerbSource})\b`, 'i');
+const leadingDanglingConnectorPattern = /^(\s*)(?:then|and)\s*(?=[.;,\n]|$)/i;
 const leadingBoundaryHandoffConnectorPattern = new RegExp(String.raw`^(\s*)([.;])\s*(?:then|and)\s+(?=${handoffActionVerbSource}\b)`, 'i');
 const leadingBoundaryHandoffActionPattern = new RegExp(String.raw`^(\s*)([.;])\s*(${handoffActionVerbSource})\b`, 'i');
 const leadingBoundaryWithDetailPattern = /^(\s*)([.;])\s*with\b/i;
 const leadingWithDetailPattern = /^(\s*)with\b/i;
+const leadingDetachedDetailPattern = new RegExp(String.raw`^\s+(?=(?:with\b|(?:and|then)\s+${handoffActionVerbSource}\b|${handoffActionVerbSource}\b))`, 'i');
 const leadingCreatePattern = /^(\s*)create\b/i;
+const generatorFlagPattern = /\s*--(?:ar|s|stylize|raw|iw|no|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+[^\s,.;]+)?/gi;
+const loraTagPattern = /<\s*lora:[^>]+>/gi;
+const breakTokenPattern = /\bBREAK\b/gi;
+const weightedParenthesisPattern = /\(([^()\n]{1,120}?):\s*-?\d+(?:\.\d+)?\)/g;
+const weightedBracketPattern = /\[([^[\]\n]{1,120}?):\s*-?\d+(?:\.\d+)?\]/g;
+const colonWeightPattern = /\s*::\s*-?\d+(?:\.\d+)?/g;
+const parentheticalPromptTokenPattern = /\(([^()\n]{1,120})\)/g;
+const bracketPromptTokenPattern = /\[([^[\]\n]{1,120})\]/g;
+const danglingConnectorBeforeBoundaryPattern = /\s+(?:and|then)\s*(?=[,.;\n])/gi;
+const finalDanglingConnectorPattern = /\s+(?:and|then)\s*$/i;
+const quotedVisibleWordsHandoffBoundaryPattern = new RegExp(
+  String.raw`(\bthe\s+(?:words?|phrases?)\s+(?:"[^"\n]{1,160}"|'[^'\n]{1,160}'|“[^”\n]{1,160}”|‘[^’\n]{1,160}’)\s+(?:appears?|is\s+printed|are\s+printed|printed)\b(?:(?![.;\n]).){0,160}?)\s+(?:and|then)\s+(${handoffActionVerbSource})\b`,
+  'gi'
+);
 
 function formatBoundaryAction(leading: string, boundary: string, verb: string): string {
   const normalizedVerb = boundary === '.' ? `${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}` : verb.toLowerCase();
   return `${leading}${boundary} ${normalizedVerb}`;
+}
+
+function normalizeQuotedVisibleWordsHandoffBoundaries(text: string): string {
+  return text.replace(
+    quotedVisibleWordsHandoffBoundaryPattern,
+    (_match, prefix: string, verb: string) => `${prefix}. ${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}`
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -224,7 +262,8 @@ function sanitizeGeneratorPromptText(prompt: string): string {
   const sanitized = sanitizeQuotedWrapperTermsOutsideVisibleText(
     transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText)
   );
-  return normalizeUnquotedWhitespace(sanitized).trim();
+  const normalizedBoundaries = normalizeQuotedVisibleWordsHandoffBoundaries(sanitized);
+  return normalizeUnquotedWhitespace(normalizedBoundaries).replace(finalDanglingConnectorPattern, '').trim();
 }
 
 function stripLeadingSchemaWrapper(prompt: string): string {
@@ -293,19 +332,35 @@ function startsWithVisibleSchemaContinuation(text: string): boolean {
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
   return transformVisibleTextRuns(prompt, (segment) => {
     let removedUploadRequest = false;
+    const hasDetachedInputRequestBoundary = detachedInputRequestBoundaryPattern.test(segment);
     const markUploadRequestRemoved = () => {
       removedUploadRequest = true;
       return '';
     };
     let next = segment
       .replace(joinedUploadReferenceRequestPattern, markUploadRequestRemoved)
+      .replace(joinedReferenceInputRequestPattern, markUploadRequestRemoved)
+      .replace(inlineReferenceInputRequestPattern, markUploadRequestRemoved)
       .replace(leadingUploadReferenceRequestPattern, markUploadRequestRemoved)
+      .replace(leadingReferenceInputRequestPattern, markUploadRequestRemoved)
+      .replace(loraTagPattern, '')
+      .replace(generatorFlagPattern, '')
+      .replace(breakTokenPattern, '')
+      .replace(weightedParenthesisPattern, '$1')
+      .replace(weightedBracketPattern, '$1')
+      .replace(colonWeightPattern, '')
+      .replace(parentheticalPromptTokenPattern, '$1')
+      .replace(bracketPromptTokenPattern, '$1')
+      .replace(danglingConnectorBeforeBoundaryPattern, '')
       .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
       .replace(/^(\s*)recreate\s+(an?|the)\s+/i, (_match, leading: string, article: string) => `${leading}Create ${article} `)
       .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
       .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
       .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
       .replace(/\brecreate\b/gi, 'create');
+    if (removedUploadRequest && hasDetachedInputRequestBoundary) {
+      next = next.replace(leadingDetachedDetailPattern, '. ');
+    }
     if (removedUploadRequest) {
       next = next.replace(/,\s+(?=with\b)/gi, ' ');
     }
@@ -315,6 +370,7 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
       .replace(leadingBoundaryHandoffActionPattern, (_match, leading: string, boundary: string, verb: string) => formatBoundaryAction(leading, boundary, verb));
     if (removedUploadRequest) {
       next = next
+        .replace(leadingDanglingConnectorPattern, '$1')
         .replace(leadingHandoffConnectorPattern, '$1')
         .replace(leadingHandoffActionPattern, (_match, leading: string, verb: string) => `${leading}${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}`)
         .replace(leadingWithDetailPattern, (_match, leading: string) => `${leading}Include`);
@@ -341,7 +397,7 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
 }
 
 function normalizeUnquotedWhitespace(text: string): string {
-  return transformUnquotedSegments(text, (segment) => segment.replace(/\s+/g, ' '));
+  return transformUnquotedSegments(text, (segment) => segment.replace(/\s+/g, ' ').replace(/\s+([,.;])/g, '$1'));
 }
 
 function sanitizeQuotedWrapperTermsOutsideVisibleText(text: string): string {
@@ -386,9 +442,10 @@ function sanitizeQuotedWrapperTerms(segment: string): string {
 const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels?)|(?:ui|code)\s+label\s+text|(?:ui|code)\s+labels?|(?:shirt|screen|poster|button|label|sign|logo|watermark|caption|heading|headline)\s+text|title|labels?|caption|logo|watermark|sign|shirt|heading|headline|button`;
 const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says|displays|shows)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
 const bareVisibleTextMarkerSource = String.raw`(?:^|[.;\n]\s*)text\s+(?:reads|says|displays|shows)\s+`;
+const quotedVisibleWordsMarkerSource = String.raw`the\s+(?:words?|phrases?)\s+(?=(?:"[^"\n]{1,160}"|'[^'\n]{1,160}'|“[^”\n]{1,160}”|‘[^’\n]{1,160}’)\s+(?:appears?|is\s+printed|are\s+printed|printed)\b)`;
 const visibleSchemaMarkerSource = String.raw`schema_version\s*:\s*reconstruction_v2\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
 const visibleQuotedSchemaMarkerSource = String.raw`\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}?\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
-const visibleTextMarkerPattern = new RegExp(String.raw`(?:${bareVisibleTextMarkerSource}|\b(?:${visibleTextMarkerSource}|${visibleSchemaMarkerSource})|${visibleQuotedSchemaMarkerSource})`, 'gi');
+const visibleTextMarkerPattern = new RegExp(String.raw`(?:${bareVisibleTextMarkerSource}|\b(?:${visibleTextMarkerSource}|${quotedVisibleWordsMarkerSource}|${visibleSchemaMarkerSource})|${visibleQuotedSchemaMarkerSource})`, 'gi');
 const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|crop|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
 const wrapperContinuationEndSource = String.raw`(?:\s+(?:as|for))?${wrapperContinuationTailSource}`;
 const wrapperActionContinuationEndSource = String.raw`(?:${wrapperContinuationEndSource}|(?=\s*[.;,\n]|$))`;
@@ -397,6 +454,8 @@ const wrapperActionContinuationSource = String.raw`(?:use|using|match|matching)\
 const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|${wrapperActionContinuationSource})|\s+recreate\b)`, 'i');
 const commaWrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|\s+(?:(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|${wrapperActionContinuationSource})|\s+recreate\b)`, 'i');
 const andWrapperContinuationPattern = new RegExp(String.raw`^\s+and\s+(?:(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationEndSource}|${wrapperActionContinuationSource})`, 'i');
+const inputRequestContinuationPattern = new RegExp(String.raw`^\s+${inputRequestSource}`, 'i');
+const connectorInputRequestContinuationPattern = new RegExp(String.raw`^\s+(?:and|then)\s+${inputRequestSource}`, 'i');
 
 function transformVisibleTextRuns(text: string, transform: (segment: string) => string): string {
   let output = '';
@@ -427,7 +486,9 @@ function findVisibleTextRunEnd(text: string, start: number): number {
       }
     }
     if (/[.;\n]/.test(text[i])) return i + 1;
+    if (text[i] === ',' && startsWithInputRequestContinuation(text, i + 1)) return i;
     if (text[i] === ',' && startsWithCommaWrapperContinuation(text, i + 1)) return i + 1;
+    if (startsWithConnectorInputRequestContinuation(text, i)) return i;
     if (startsWithAndWrapperContinuation(text, i)) return i;
     if (startsWithWrapperContinuation(text, i) && !isAfterComma(text, i)) return i;
   }
@@ -444,6 +505,14 @@ function startsWithCommaWrapperContinuation(text: string, start: number): boolea
 
 function startsWithAndWrapperContinuation(text: string, start: number): boolean {
   return andWrapperContinuationPattern.test(text.slice(start));
+}
+
+function startsWithInputRequestContinuation(text: string, start: number): boolean {
+  return inputRequestContinuationPattern.test(text.slice(start));
+}
+
+function startsWithConnectorInputRequestContinuation(text: string, start: number): boolean {
+  return connectorInputRequestContinuationPattern.test(text.slice(start));
 }
 
 function isAfterComma(text: string, index: number): boolean {
