@@ -29,7 +29,7 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 6. Confirm the JSON tab contains `schema_version: "reconstruction_v2"`.
 7. Confirm JSON contains `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics`.
 8. Confirm normal prompt copy and Open in generator use `json_prompt.generation_prompt` text, not the full JSON object.
-9. Confirm pasted generator text does not include `schema_version`, `reconstruction_v2`, `source image`, or `reference image`.
+9. Confirm pasted generator text does not include unquoted wrapper tokens such as `schema_version`, `reconstruction_v2`, `source image`, or `reference image`; quoted visible source text must stay exact.
 10. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
 11. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
 
@@ -47,9 +47,9 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 ## Pass Criteria
 
 - Both UI paths complete without API, parse, or storage errors.
-- `en.prompt` is the main generator handoff prompt.
+- Normal prompt copy and Open in generator use `json_prompt.generation_prompt` as the main generator handoff, with `en.prompt` only as fallback.
 - New output has no hidden Japanese field and no duplicate recreation-prompt field.
-- JSON can be copied into a generator without dropping load-bearing motion, spatial, text, or negative-prompt facts.
+- Explicit JSON data copy remains available without dropping load-bearing motion, spatial, text, or negative-prompt facts.
 - JSON v2 evidence is present and meaningful for the actual image.
 - The generated prompt does not force every image toward a sharp, rectangular, polished, or over-structured style.
 - No project-owned Playwright, temporary Chromium, test server, or stale extension test process remains running afterward.

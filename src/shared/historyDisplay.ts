@@ -102,6 +102,7 @@ export function stringifyJsonPrompt(jsonPrompt: PromptAnalysis['json_prompt'] | 
 
 export function stringifyPromptAnalysis(analysis: PromptAnalysis): string {
   const source = toRecord(analysis);
+  const legacyRecreationPrompt = typeof source.recreation_prompt === 'string' ? source.recreation_prompt.trim() : '';
   const ordered: Record<string, unknown> = {};
   const knownKeys = ['zh', 'en', 'zh_style_tags', 'en_style_tags', 'json_prompt', 'prompt_core', 'negative_prompt'];
   for (const key of knownKeys) {
@@ -111,6 +112,7 @@ export function stringifyPromptAnalysis(analysis: PromptAnalysis): string {
   for (const [key, value] of Object.entries(source)) {
     if (!knownKeys.includes(key) && key !== 'recreation_prompt') ordered[key] = value;
   }
+  if (legacyRecreationPrompt) ordered.recreation_prompt = legacyRecreationPrompt;
   return JSON.stringify(ordered, null, 2);
 }
 
@@ -194,20 +196,126 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function sanitizeGeneratorPromptText(prompt: string): string {
-  return prompt
-    .trim()
-    .replace(/"?schema_version"?\s*:\s*"?reconstruction_v2"?[,.]?\s*/gi, '')
+  const trimmed = stripLeadingSchemaWrapper(prompt.trim());
+  return transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText)
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stripLeadingSchemaWrapper(prompt: string): string {
+  let next = prompt;
+  let previous = '';
+  while (next !== previous) {
+    previous = next;
+    next = next
+      .replace(/^\s*\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
+      .replace(/^\s*\{?\s*schema_version\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
+      .replace(/^\s*schema_version\s*:\s*reconstruction_v2[,.]?\s*/i, '')
+      .trimStart();
+  }
+  return next;
+}
+
+function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
+  return transformVisibleTextRuns(prompt, (segment) => segment
     .replace(/\b(?:schema_version|reconstruction_v2)\b[,:;.]?\s*/gi, '')
-    .replace(/^\s*recreate\s+(an?|the)\s+/i, (_match, article: string) => `Create ${article} `)
+    .replace(/^(\s*)recreate\s+(an?|the)\s+/i, (_match, leading: string, article: string) => `${leading}Create ${article} `)
     .replace(/\brecreate\s+this\s+image\b/gi, 'create the described image')
     .replace(/\brecreate\s+the\s+source\b/gi, 'create the described target')
+    .replace(/\bplease\s+recreate\s+/gi, 'Please create ')
     .replace(/\brecreate\b/gi, 'create')
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
     .replace(/\bsource visual\b/gi, 'visual target')
     .replace(/\bthe source\b/gi, 'the target')
-    .replace(/\bthis source\b/gi, 'this target')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/\bthis source\b/gi, 'this target'));
+}
+
+function transformVisibleTextRuns(text: string, transform: (segment: string) => string): string {
+  const markerPattern = /\b(?:(?:visible|legible)\s+text|title|label|caption|logo|watermark|code\s+label|ui\s+label)\s+(?:reads|says)\s+/gi;
+  let output = '';
+  let index = 0;
+  let match: RegExpExecArray | null;
+  while ((match = markerPattern.exec(text))) {
+    const markerStart = match.index;
+    if (markerStart < index) continue;
+    output += transform(text.slice(index, markerStart));
+    const runEnd = findVisibleTextRunEnd(text, markerPattern.lastIndex);
+    output += text.slice(markerStart, runEnd);
+    index = runEnd;
+    markerPattern.lastIndex = runEnd;
+  }
+  output += transform(text.slice(index));
+  return output;
+}
+
+function findVisibleTextRunEnd(text: string, start: number): number {
+  for (let i = start; i < text.length; i += 1) {
+    if (/[.;\n]/.test(text[i])) return i + 1;
+  }
+  return text.length;
+}
+
+function transformUnquotedSegments(text: string, transform: (segment: string) => string): string {
+  let output = '';
+  let index = 0;
+  while (index < text.length) {
+    const closer = quoteCloserAt(text, index);
+    if (!closer) {
+      const nextQuoteIndex = findNextQuoteIndex(text, index + 1);
+      const end = nextQuoteIndex === -1 ? text.length : nextQuoteIndex;
+      output += transform(text.slice(index, end));
+      index = end;
+      continue;
+    }
+
+    const endQuoteIndex = findClosingQuoteIndex(text, closer, index + 1);
+    if (endQuoteIndex === -1) {
+      output += transform(text.slice(index));
+      break;
+    }
+
+    output += text.slice(index, endQuoteIndex + 1);
+    index = endQuoteIndex + 1;
+  }
+  return output;
+}
+
+function quoteCloserAt(text: string, index: number): string | undefined {
+  const opener = text[index];
+  if (opener === "'" && isWordCharacter(text[index - 1])) return undefined;
+  return quoteCloser(opener);
+}
+
+function quoteCloser(opener: string): string | undefined {
+  const pairs: Record<string, string> = {
+    '"': '"',
+    "'": "'",
+    '`': '`',
+    '“': '”',
+    '‘': '’',
+    '「': '」',
+    '『': '』',
+    '《': '》'
+  };
+  return pairs[opener];
+}
+
+function findNextQuoteIndex(text: string, start: number): number {
+  for (let i = start; i < text.length; i += 1) {
+    if (quoteCloserAt(text, i)) return i;
+  }
+  return -1;
+}
+
+function findClosingQuoteIndex(text: string, closer: string, start: number): number {
+  for (let i = start; i < text.length; i += 1) {
+    if (text[i] === closer && text[i - 1] !== '\\') return i;
+  }
+  return -1;
+}
+
+function isWordCharacter(value: string | undefined): boolean {
+  return Boolean(value && /[A-Za-z0-9]/.test(value));
 }

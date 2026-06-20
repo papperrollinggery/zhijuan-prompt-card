@@ -8,6 +8,13 @@ Required for UI changes.
 
 ## Privacy / network impact
 
+## Review / merge gate
+
+- [ ] GitHub checks are passing, or this PR documents why no checks are configured
+- [ ] Configured cloud Codex/GitHub review status is recorded
+- [ ] No unresolved cloud review blockers remain
+- [ ] Explicit merge approval is recorded before merge
+
 ## Checklist
 
 - [ ] I ran `npm run typecheck`

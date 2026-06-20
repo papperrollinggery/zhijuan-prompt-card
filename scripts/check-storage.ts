@@ -101,6 +101,78 @@ assert(!handoffPrompt.includes('schema_version'));
 assert(!handoffPrompt.includes('reconstruction_v2'));
 assert(!/source image|reference image|recreate/i.test(handoffPrompt));
 
+const standaloneRecreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for standalone recreate', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Accurately recreate the poster with layered haze, visible Chinese UI text, and no uploaded reference image.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(standaloneRecreateAnalysis),
+  'Accurately create the poster with layered haze, visible Chinese UI text, and no uploaded visual target.'
+);
+
+const quotedVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2. Poster title reads "Recreate Yourself" and code label reads "schema_version: reconstruction_v2"; source image glow around the text.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(quotedVisibleTextAnalysis),
+  'Poster title reads "Recreate Yourself" and code label reads "schema_version: reconstruction_v2"; visual target glow around the text.'
+);
+
+const quotedSchemaValueWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after quoted wrapper value', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: "reconstruction_v2". Create a clean poster with layered haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(quotedSchemaValueWrapperAnalysis), 'Create a clean poster with layered haze.');
+
+const possessivePromptAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for possessives', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: "Artist's source image glow matches viewer's reference image note."
+  }
+};
+assert.equal(getGeneratorPrompt(possessivePromptAnalysis), "Artist's visual target glow matches viewer's visual target note.");
+
+const unquotedVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for unquoted visible text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads Recreate Yourself and code label reads schema_version: reconstruction_v2; source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(unquotedVisibleTextAnalysis),
+  'Poster title reads Recreate Yourself and code label reads schema_version: reconstruction_v2; visual target glow behind the lettering.'
+);
+
+const visibleThenRecreateAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after visible text run', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads Recreate Yourself; recreate the poster with source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleThenRecreateAnalysis),
+  'Poster title reads Recreate Yourself; Create the poster with visual target glow behind the lettering.'
+);
+
 const schemaOnlyHandoffAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after schema-only generator field', analysis: '' },
@@ -136,14 +208,15 @@ const legacyJsonOnlyAnalysis = {
   },
   prompt_core: '',
   negative_prompt: '',
-  recreation_prompt: 'legacy duplicate should not be exported'
+  recreation_prompt: 'legacy high-fidelity handoff should be exported'
 };
 const legacyJsonText = stringifyPromptAnalysis(legacyJsonOnlyAnalysis as never);
 const legacyJson = JSON.parse(legacyJsonText);
 assert.equal(legacyJson.json_prompt.schema_version, 'reconstruction_v1');
 assert.equal(legacyJson.json_prompt.summary, 'legacy summary');
 assert.equal(legacyJson.json_prompt.global_fingerprint, undefined);
-assert.equal(legacyJson.recreation_prompt, undefined);
+assert.equal(legacyJson.recreation_prompt, 'legacy high-fidelity handoff should be exported');
+assert.equal(JSON.parse(canonicalAnalysis).recreation_prompt, undefined);
 
 await clearHistory();
 await addHistoryEntry(createRunningHistoryEntry({ title: 'Check image' }));
