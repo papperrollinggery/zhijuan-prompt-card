@@ -150,6 +150,19 @@ assert.equal(
   '"schema_version": "reconstruction_v2" appears as a visible code label at the top; visual target glow behind it.'
 );
 
+const leadingUnquotedSchemaVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for leading unquoted schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2 appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingUnquotedSchemaVisibleTextAnalysis),
+  'schema_version: reconstruction_v2 appears as a visible code label at the top; visual target glow behind it.'
+);
+
 const leadingQuotedSchemaWrapperAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for quoted schema wrapper', analysis: '' },
@@ -226,6 +239,29 @@ const leadingBracedSchemaNounWrapperAnalysis = {
 };
 assert.equal(getGeneratorPrompt(leadingBracedSchemaNounWrapperAnalysis), 'A cinematic portrait with layered haze.');
 
+const leadingImage2WrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for Image2 wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Image 2 prompt: Create a clean poster with source image glow.'
+  }
+};
+assert.equal(getGeneratorPrompt(leadingImage2WrapperAnalysis), 'Create a clean poster with visual target glow.');
+
+const leadingImage2VisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible Image 2 label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Image 2: appears as visible text at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingImage2VisibleTextAnalysis),
+  'Image 2: appears as visible text at the top; visual target glow behind it.'
+);
+
 const leadingBracedSchemaCommaNormalVisibleAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for comma braced visible prompt', analysis: '' },
@@ -286,6 +322,19 @@ const referenceScreenshotWrapperAnalysis = {
 assert.equal(
   getGeneratorPrompt(referenceScreenshotWrapperAnalysis),
   'Use target screenshot lighting and match the visual target palette; target screenshot glow remains.'
+);
+
+const referencePhotoWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for reference photo wrappers', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use the reference photo lighting and match the source photo crop.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(referencePhotoWrapperAnalysis),
+  'Use the target photo lighting and match the target photo crop.'
 );
 
 const unquotedVisibleTextAnalysis = {
@@ -416,6 +465,19 @@ const pluralColonVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(pluralColonVisibleTextAnalysis),
   'Visible labels: "source image" and "reference image"; use visual target glow behind the lettering.'
+);
+
+const displaysShowsVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for displays/shows visible labels', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Logo displays "source image" and UI label shows "reference image"; use source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(displaysShowsVisibleTextAnalysis),
+  'Logo displays "source image" and UI label shows "reference image"; use visual target glow behind the lettering.'
 );
 
 const visibleTextWithReferenceWrapperAnalysis = {

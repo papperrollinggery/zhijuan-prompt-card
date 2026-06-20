@@ -208,12 +208,19 @@ function stripLeadingSchemaWrapper(prompt: string): string {
   let previous = '';
   while (next !== previous) {
     previous = next;
-    next = stripLeadingQuotedSchemaWrapper(stripLeadingBracedSchemaWrapper(next))
-      .replace(/^\s*\{?\s*schema_version\s*:\s*"reconstruction_v2"\s*[,.]?\s*\}?\s*/i, '')
-      .replace(/^\s*schema_version\s*:\s*reconstruction_v2[,.]?\s*/i, '')
-      .trimStart();
+    next = stripLeadingGeneratorLabelWrapper(
+      stripLeadingUnquotedSchemaWrapper(stripLeadingQuotedSchemaWrapper(stripLeadingBracedSchemaWrapper(next)))
+    ).trimStart();
   }
   return next;
+}
+
+function stripLeadingGeneratorLabelWrapper(prompt: string): string {
+  const match = prompt.match(/^\s*(?:image\s*2|image2)(?:\s+prompt)?\s*[:：.\-]\s*/i);
+  if (!match) return prompt;
+  const rest = prompt.slice(match[0].length);
+  if (!rest) return '';
+  return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
 }
 
 function stripLeadingBracedSchemaWrapper(prompt: string): string {
@@ -242,6 +249,19 @@ function stripLeadingQuotedSchemaWrapper(prompt: string): string {
   return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
 }
 
+function stripLeadingUnquotedSchemaWrapper(prompt: string): string {
+  const match = prompt.match(/^\s*schema_version\s*:\s*(?:"reconstruction_v2"|reconstruction_v2)\s*/i);
+  if (!match) return prompt;
+  const rest = prompt.slice(match[0].length);
+  if (!rest) return '';
+  const separator = rest.match(/^[,.]\s*/);
+  if (separator) {
+    const afterSeparator = rest.slice(separator[0].length);
+    return startsWithVisibleSchemaContinuation(afterSeparator) ? prompt : afterSeparator;
+  }
+  return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
+}
+
 function startsWithVisibleSchemaContinuation(text: string): boolean {
   return /^(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+label|ui\s+label|text|lettering)\b)/i.test(text);
 }
@@ -257,9 +277,11 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\breference screenshot\b/gi, 'target screenshot')
     .replace(/\breference visual\b/gi, 'visual target')
+    .replace(/\breference photo\b/gi, 'target photo')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
-    .replace(/\bsource visual\b/gi, 'visual target'));
+    .replace(/\bsource visual\b/gi, 'visual target')
+    .replace(/\bsource photo\b/gi, 'target photo'));
 }
 
 function normalizeUnquotedWhitespace(text: string): string {
@@ -298,18 +320,22 @@ function sanitizeQuotedWrapperTerms(segment: string): string {
     .replace(/\breference image\b/gi, 'visual target')
     .replace(/\breference screenshot\b/gi, 'target screenshot')
     .replace(/\breference visual\b/gi, 'visual target')
+    .replace(/\breference photo\b/gi, 'target photo')
     .replace(/\bsource image\b/gi, 'visual target')
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
-    .replace(/\bsource visual\b/gi, 'visual target');
+    .replace(/\bsource visual\b/gi, 'visual target')
+    .replace(/\bsource photo\b/gi, 'target photo');
 }
 
 const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels?)|title|labels?|caption|logo|watermark|sign|shirt|heading|headline|button|code\s+labels?|ui\s+labels?|shirt\s+text|screen\s+text|poster\s+text`;
-const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
-const visibleTextMarkerPattern = new RegExp(String.raw`\b${visibleTextMarkerSource}`, 'gi');
-const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
-const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
-const commaWrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
-const andWrapperContinuationPattern = new RegExp(String.raw`^\s+and\s+(?:source|reference)\s+(?:image|screenshot|visual)\b${wrapperContinuationTailSource}`, 'i');
+const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says|displays|shows)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
+const visibleSchemaMarkerSource = String.raw`schema_version\s*:\s*reconstruction_v2\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
+const visibleTextMarkerPattern = new RegExp(String.raw`\b(?:${visibleTextMarkerSource}|${visibleSchemaMarkerSource})`, 'gi');
+const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|crop|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
+const wrapperNounSource = String.raw`(?:image|screenshot|visual|photo)`;
+const wrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
+const commaWrapperContinuationPattern = new RegExp(String.raw`^(?:\s+(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationTailSource}|\s+(?:with|using|from|based\s+on)\s+(?:an?\s+|the\s+)?(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationTailSource}|\s+recreate\b)`, 'i');
+const andWrapperContinuationPattern = new RegExp(String.raw`^\s+and\s+(?:source|reference)\s+${wrapperNounSource}\b${wrapperContinuationTailSource}`, 'i');
 
 function transformVisibleTextRuns(text: string, transform: (segment: string) => string): string {
   let output = '';
