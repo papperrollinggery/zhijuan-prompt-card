@@ -137,6 +137,16 @@ const quotedSchemaValueWrapperAnalysis = {
 };
 assert.equal(getGeneratorPrompt(quotedSchemaValueWrapperAnalysis), 'Create a clean poster with layered haze.');
 
+const semicolonSchemaWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after semicolon schema wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2; Create a clean poster with source image glow.'
+  }
+};
+assert.equal(getGeneratorPrompt(semicolonSchemaWrapperAnalysis), 'Create a clean poster with visual target glow.');
+
 const leadingQuotedSchemaVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for leading quoted schema text', analysis: '' },
@@ -148,6 +158,32 @@ const leadingQuotedSchemaVisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(leadingQuotedSchemaVisibleTextAnalysis),
   '"schema_version": "reconstruction_v2" appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const leadingQuotedSchemaSemicolonVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for semicolon quoted schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"schema_version": "reconstruction_v2"; appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingQuotedSchemaSemicolonVisibleTextAnalysis),
+  '"schema_version": "reconstruction_v2"; appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const leadingUnquotedSchemaSemicolonVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for semicolon unquoted schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2; appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingUnquotedSchemaSemicolonVisibleTextAnalysis),
+  'schema_version: reconstruction_v2; appears as a visible code label at the top; visual target glow behind it.'
 );
 
 const leadingUnquotedSchemaVisibleTextAnalysis = {
@@ -363,6 +399,32 @@ assert.equal(
   'Poster title reads Recreate Yourself and visual target glow behind the lettering.'
 );
 
+const visibleTextThenUseReferenceWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after and-use reference wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SALE and use the reference image as guidance.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleTextThenUseReferenceWrapperAnalysis),
+  'Poster title reads SALE and use the visual target as guidance.'
+);
+
+const visibleTextThenUseReferenceAtSentenceEndAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after and-use reference at sentence end', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SALE and use the reference image.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleTextThenUseReferenceAtSentenceEndAnalysis),
+  'Poster title reads SALE and use the visual target.'
+);
+
 const commaVisibleTextThenNormalWrapperAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after comma visible text marker', analysis: '' },
@@ -545,6 +607,26 @@ assert.equal(
   'Use "visual target" lighting and \'visual target\' glow, while label reads "source image".'
 );
 
+const quotedWholePromptWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quote-wrapped prompt wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"Recreate this image with source image glow."'
+  }
+};
+assert.equal(getGeneratorPrompt(quotedWholePromptWrapperAnalysis), '"create the described image with visual target glow."');
+
+const quotedWholePromptSchemaWrapperAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quote-wrapped schema wrapper', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"schema_version: reconstruction_v2. Create a clean poster with source image glow."'
+  }
+};
+assert.equal(getGeneratorPrompt(quotedWholePromptSchemaWrapperAnalysis), '"Create a clean poster with visual target glow."');
+
 const signQuotedVisibleSourceTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for sign source text', analysis: '' },
@@ -580,6 +662,16 @@ const schemaOnlyHandoffAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(schemaOnlyHandoffAnalysis), 'Fallback English prompt after schema-only generator field');
+
+const semicolonSchemaOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after semicolon schema-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2;'
+  }
+};
+assert.equal(getGeneratorPrompt(semicolonSchemaOnlyHandoffAnalysis), 'Fallback English prompt after semicolon schema-only generator field');
 
 const sortedJsonPrompt = {
   ...Object.fromEntries(Object.entries(currentAnalysis.json_prompt).sort(([left], [right]) => left.localeCompare(right))),
