@@ -653,6 +653,32 @@ assert.equal(
   'A shirt says "reference image" and a sign with text "source image"; use visual target glow.'
 );
 
+const buttonTextVisibleSourceTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for button text visible source words', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'A toolbar button text reads "source image"; use source image glow.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(buttonTextVisibleSourceTextAnalysis),
+  'A toolbar button text reads "source image"; use visual target glow.'
+);
+
+const uiLabelTextVisibleReferenceTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for UI label text visible reference words', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'UI label text says "reference image"; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(uiLabelTextVisibleReferenceTextAnalysis),
+  'UI label text says "reference image"; visual target glow behind it.'
+);
+
 const schemaOnlyHandoffAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after schema-only generator field', analysis: '' },
