@@ -363,8 +363,21 @@ function extractStructuredGenerationPrompt(prompt: string): string | undefined {
     return parseStructuredStringLiteral(quotedMatch[1]) ?? quotedMatch[1].slice(1, -1);
   }
 
-  const bareMatch = prompt.match(/"?(?:json_prompt\.)?generation_prompt"?\s*[:：]\s*([^,}\n]+)/i);
-  return bareMatch?.[1]?.trim();
+  const bareMatch = prompt.match(/"?(?:json_prompt\.)?generation_prompt"?\s*[:：]\s*/i);
+  if (!bareMatch) return undefined;
+  const rest = prompt.slice((bareMatch.index ?? 0) + bareMatch[0].length);
+  return trimBareStructuredGenerationPrompt(rest);
+}
+
+function trimBareStructuredGenerationPrompt(prompt: string): string | undefined {
+  const trimmed = prompt.trim();
+  if (!trimmed) return undefined;
+  const fieldBoundary = trimmed.match(
+    /(?:^|[,\n])\s*"?(?:schema_version|summary|subject|action_pose|details_appearance|environment_background|lighting_atmosphere|composition_framing|style_camera|aspect_ratio|likely_generation_intent|colors|materials|quality_modifiers|fidelity_priorities|global_fingerprint|observation_units|text_elements|reconstruction_priorities|spatial_dynamics|generation_negative_prompt|negative_prompt)"?\s*[:：]/i
+  );
+  const end = fieldBoundary?.index && fieldBoundary.index > 0 ? fieldBoundary.index : trimmed.length;
+  const value = trimmed.slice(0, end).replace(/\s*[,}]\s*$/, '').trim();
+  return value || undefined;
 }
 
 function startsWithStructuredPromptContainer(prompt: string): boolean {

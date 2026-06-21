@@ -11,7 +11,6 @@
 - Preserves true visible text exactly, including UI labels, printed words, and visible schema-like labels, while still cleaning non-visible source/reference wrapper wording.
 - Removes common generator-specific syntax from generator-facing prompt fields, including aspect/weight flags, LoRA tags, `BREAK`, bracket tokens, and prompt weights.
 - Keeps legacy and partial history records copyable through compatibility fallbacks.
-- Adds gstack/Codex thread workflow rules, PR review gates, cloud Codex review requirements, and PR-facing merge discipline for future releases.
 
 **中文**
 
@@ -22,7 +21,6 @@
 - 真实可见文字保持原样，包括 UI 标签、印刷文字和画面中确实可见的类似 schema 标签；非可见的 source/reference 包装话术仍会被清理。
 - 清理面向生成器字段中的常见生成器专属语法，包括比例/权重参数、LoRA 标签、`BREAK`、括号 token 和 prompt weight。
 - 旧历史和不完整历史记录继续通过兼容 fallback 保持可复制。
-- 增加 gstack/Codex thread 工作流规则、PR 审核 gate、云端 Codex review 要求和面向 PR 的合并纪律。
 
 ## 0.3.2
 

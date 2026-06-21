@@ -188,6 +188,32 @@ const bareStructuralGenerationPromptLabelAnalysis = {
 };
 assert.equal(getGeneratorPrompt(bareStructuralGenerationPromptLabelAnalysis), 'Create a clean poster with visual target glow.');
 
+const commaBareStructuralGenerationPromptLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after comma bare generation label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'generation_prompt: Create a clean poster, with blue haze and diagonal light, bold Chinese title.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(commaBareStructuralGenerationPromptLabelAnalysis),
+  'Create a clean poster, with blue haze and diagonal light, bold Chinese title.'
+);
+
+const fieldDelimitedBareStructuralGenerationPromptLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after field-delimited bare generation label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'generation_prompt: Create a clean poster, with blue haze and diagonal light, generation_negative_prompt: watermark'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(fieldDelimitedBareStructuralGenerationPromptLabelAnalysis),
+  'Create a clean poster, with blue haze and diagonal light'
+);
+
 const standaloneRecreateAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for standalone recreate', analysis: '' },
