@@ -97,9 +97,26 @@ Open the extension options page and set:
 | Default Generator | The external generator opened by the handoff button |
 | Language | Default UI/output language preference |
 
-### Recommended Maintainer Setup
+### Recommended Setup: BridgeDeck
 
-The maintainer workflow uses [BridgeDeck](https://github.com/papperrollinggery/bridgedeck) as a local OpenAI-compatible adapter with a GPT-5.5 vision model. Other compatible endpoints can work when they support Chat Completions with image input.
+[BridgeDeck](https://github.com/papperrollinggery/bridgedeck) is an optional local OpenAI-compatible bridge adapter maintained separately. It is useful when you want Zhijuan Prompt Card to call a local bridge endpoint instead of wiring every model provider directly into the extension.
+
+BridgeDeck can expose a `/v1` API shape that the extension can use as its vision endpoint while the extension itself stays local-first and provider-neutral. BridgeDeck is not bundled with Zhijuan Prompt Card and is not required.
+
+Example local configuration:
+
+```text
+Base URL:
+http://127.0.0.1:8876/v1
+
+API Key:
+local-bridge
+
+Model:
+gpt-5.5
+```
+
+If BridgeDeck is not running locally, replace these values with your own compatible vision endpoint. `gpt-5.5` is a BridgeDeck model alias in the maintainer workflow. Users can use any compatible multimodal vision model. The extension does not include model access, API credits, or a Zhijuan forwarding server by default.
 
 See [Model Compatibility](docs/MODELS.md) for tested adapters and reporting guidance.
 

@@ -97,9 +97,26 @@ npm run build
 | Default Generator | 点击交接按钮时打开的外部生成器 |
 | Language | 默认 UI/输出语言偏好 |
 
-### 维护者推荐配置
+### 推荐配置：BridgeDeck
 
-维护者工作流使用 [BridgeDeck](https://github.com/papperrollinggery/bridgedeck) 作为本地 OpenAI-compatible adapter，并连接 GPT-5.5 视觉模型。其他兼容端点只要支持 Chat Completions 图片输入，也可以使用。
+[BridgeDeck](https://github.com/papperrollinggery/bridgedeck) 是一个可选的本地 OpenAI-compatible bridge adapter，独立维护。当你希望 Zhijuan Prompt Card 调用本地 bridge endpoint，而不是把每个模型服务商都直接接进扩展时，BridgeDeck 更适合作为推荐配置。
+
+BridgeDeck 可以提供扩展可用的 `/v1` 视觉端点形态，同时让扩展本身保持本地优先和 provider-neutral。BridgeDeck 不随 Zhijuan Prompt Card 打包，也不是必需项。
+
+本地示例配置：
+
+```text
+Base URL:
+http://127.0.0.1:8876/v1
+
+API Key:
+local-bridge
+
+Model:
+gpt-5.5
+```
+
+如果你没有在本机运行 BridgeDeck，请把这些值替换成自己的多模态视觉模型 API。`gpt-5.5` 是维护者工作流里的 BridgeDeck model alias。用户可以使用任何兼容的多模态视觉模型。扩展本身不包含模型访问、不包含 API credits，也默认不通过 Zhijuan 服务器转发。
 
 已测试适配器和上报方式见 [Model Compatibility](docs/MODELS.md)。
 
