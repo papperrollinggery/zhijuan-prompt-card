@@ -2,22 +2,24 @@
 
 ## v0.3.3 Release Build
 
-- Prompt handoff regression: pass, `npm run check:storage`; covers schema wrapper stripping, Image2 prompt-label stripping, upload/reference wrapper stripping, visible-text preservation, shorthand `reference(s)`, plural `as references`, legacy fallback, and generator syntax cleanup.
+- Prompt handoff regression: pass, `npm run check:storage`; covers schema wrapper stripping, JSON-like field fragments accidentally returned inside generator prompts, quoted `generation_prompt` labels, nested JSON prompt wrappers, true visible `generation_prompt` code-label preservation, Image2 prompt-label stripping, upload/reference wrapper stripping, visible-text preservation, shorthand `reference(s)`, plural `as references`, legacy fallback, and generator syntax cleanup.
 - JSON repair regression: pass, `npm run check:json-repair`.
 - Prompt goal coverage: pass, `npm run check:prompt-goal`; 60 contract rules, 12 simulated fidelity cases, 1 simulated JSON generator-readiness case.
 - Typecheck: pass, `npm run typecheck`.
 - Build: pass, `npm run build`.
-- Visual history smoke: pass, `npm run smoke:history`; 14, 35, and 100 record cases, running-history guard, and clear-sync guard passed.
+- Built bundle label check: pass, `rg -n "结构 JSON|Structured JSON|提示词输出|Prompt output" dist/content.js dist/assets/popup.js src/content/panel.tsx`; content bundle includes `Structured JSON`.
+- Bilibili E2E: pass, `npm run e2e:bilibili`, `tmp/browser-tests/pw-e2e-summary-1782023365693.json`; includes `copy_english_prompt_ok` and `copy_json_ok`. One prior rerun hit a transient Bilibili initial media-load timeout, then passed on retry without code changes.
+- Visual history smoke: pass, `npm run smoke:history`, `tmp/browser-tests/pw-visual-history-summary-1782023345880.json`; 14, 35, and 100 record cases, running-history guard, and clear-sync guard passed.
 - Release package: pass, `npm run release:package`.
 - Release scan: pass, `npm run release:check`.
 - Package output: `release/zhijuan-prompt-card-0.3.3.zip`.
-- Package sha256: `d588a86ca94d11632c05adc01e4d42be92b764f424eebb980d3f1c036ecf362e`.
+- Package sha256: `2c16948f7c0611ffb33ad545955dbc25db633e110cb80b0b139618880decda65`.
 - Dist manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
 - Zip manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
 - Diff whitespace: pass, `git diff --check`.
-- Thread review: pass, final Engineer / QA / Cold reviewer Codex worker threads found no P1/P2 blockers.
-- Cloud Codex review: pass on PR head `d3ed71f60c`; no major issues found before release documentation update.
-- v0.3.3 scope: generator-safe prompt handoff for normal copy, history copy, and Open in generator; structured JSON remains copyable; schema/Image2/reference-upload wrappers stay out of generator-facing prompt text unless they are true visible text.
+- Thread review: pass, cold-review worker `019ee8dc-05e0-7762-9fda-82c23cb6c729` found no blockers on the final diff and verified normal copy/Open generator, explicit JSON copy, visible text preservation, fallback, exact user pattern coverage, docs clarity, and unrelated untracked file risk.
+- Cloud Codex review gate: final pushed PR head still requires a fresh cloud review before merge. Prior cloud review on PR head `5b0cfabd3a` returned no inline blocker comments before this final local fix.
+- v0.3.3 scope: generator-safe prompt handoff for normal copy, history copy, and Open in generator; structured JSON remains copyable and labeled as structured JSON in the panel; schema/Image2/reference-upload wrappers stay out of generator-facing prompt text unless they are true visible text.
 - Release status: pushed to PR branch; pending final cloud review, user refreshed-extension acceptance, merge, tag, and GitHub release.
 
 ## v0.3.2 Test Build

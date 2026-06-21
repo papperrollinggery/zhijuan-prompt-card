@@ -260,6 +260,72 @@ const leadingQuotedSchemaWrapperAnalysis = {
 };
 assert.equal(getGeneratorPrompt(leadingQuotedSchemaWrapperAnalysis), 'Create a clean poster with visual target glow.');
 
+const quotedJsonFieldFragmentAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted JSON field fragment', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"schema_version": "reconstruction_v2",\n"generation_prompt": "Create a clean poster with source image glow."'
+  }
+};
+assert.equal(getGeneratorPrompt(quotedJsonFieldFragmentAnalysis), 'Create a clean poster with visual target glow.');
+
+const quotedGenerationPromptFieldAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for quoted generation prompt field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"generation_prompt": "Create a clean poster with reference image glow."'
+  }
+};
+assert.equal(getGeneratorPrompt(quotedGenerationPromptFieldAnalysis), 'Create a clean poster with visual target glow.');
+
+const quotedGenerationPromptVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible generation prompt field text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '"generation_prompt": "SALE" appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(quotedGenerationPromptVisibleTextAnalysis),
+  '"generation_prompt": "SALE" appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const bracedGenerationPromptVisibleTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for braced visible generation prompt field text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"generation_prompt":"SALE"} appears as a visible code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(bracedGenerationPromptVisibleTextAnalysis),
+  '{"generation_prompt":"SALE"} appears as a visible code label at the top; visual target glow behind it.'
+);
+
+const fullJsonObjectInGenerationPromptAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for JSON object in generation field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"schema_version":"reconstruction_v2","generation_prompt":"Create a clean poster with source image glow."}'
+  }
+};
+assert.equal(getGeneratorPrompt(fullJsonObjectInGenerationPromptAnalysis), 'Create a clean poster with visual target glow.');
+
+const nestedJsonPromptObjectInGenerationPromptAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for nested JSON object in generation field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: '{"json_prompt":{"schema_version":"reconstruction_v2","generation_prompt":"Create a clean poster with reference image glow."}}'
+  }
+};
+assert.equal(getGeneratorPrompt(nestedJsonPromptObjectInGenerationPromptAnalysis), 'Create a clean poster with visual target glow.');
+
 const leadingBracedSchemaVisibleTextAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for braced visible schema text', analysis: '' },

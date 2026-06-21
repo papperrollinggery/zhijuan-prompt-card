@@ -25,13 +25,14 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 2. Open the Zhijuan floating panel.
 3. Choose the page image selection action.
 4. Select the target image and wait for success.
-5. Confirm the English tab shows one primary copyable recreation prompt.
-6. Confirm the JSON tab contains `schema_version: "reconstruction_v2"`.
+5. Confirm the English tab shows one primary copyable recreation prompt and is the tab to use for Image2 or other image generators.
+6. Confirm the JSON tab is labeled as structured JSON, not prompt output, and contains `schema_version: "reconstruction_v2"`.
 7. Confirm JSON contains `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics`.
 8. Confirm normal prompt copy and Open in generator use `json_prompt.generation_prompt` text, not the full JSON object.
 9. Confirm pasted generator text does not include unquoted wrapper tokens such as `schema_version`, `reconstruction_v2`, `source image`, or `reference image`; quoted visible source text must stay exact.
-10. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
-11. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
+10. Confirm a model response that accidentally starts the generator field with `"schema_version": "reconstruction_v2",` or `"generation_prompt": ...` is cleaned before normal Copy and Open in generator.
+11. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
+12. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
 
 ## Local Image Upload
 

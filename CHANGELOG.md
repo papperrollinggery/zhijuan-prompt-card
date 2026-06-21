@@ -5,7 +5,9 @@
 **English**
 
 - Fixes normal prompt copy, history prompt copy, and Open in generator so structural JSON labels, Image2 labels, and reference-upload wording do not leak into the generator-facing prompt.
+- Handles JSON-like field fragments accidentally returned inside the generator prompt, including leading `"schema_version": "reconstruction_v2",` and quoted `"generation_prompt": ...` lines.
 - Keeps `schema_version: "reconstruction_v2"` in structured JSON while preventing it from becoming the image prompt text.
+- Labels the JSON result view as structured JSON so it is not confused with the prompt text meant for Image2 or other image generators.
 - Preserves true visible text exactly, including UI labels, printed words, and visible schema-like labels, while still cleaning non-visible source/reference wrapper wording.
 - Removes common generator-specific syntax from generator-facing prompt fields, including aspect/weight flags, LoRA tags, `BREAK`, bracket tokens, and prompt weights.
 - Keeps legacy and partial history records copyable through compatibility fallbacks.
@@ -14,7 +16,9 @@
 **中文**
 
 - 修复普通复制、历史复制和“打开生成器”，避免结构化 JSON 标签、Image2 标签和参考图上传话术进入面向生成器的提示词。
+- 处理模型误把 JSON 字段片段塞进生成提示词的情况，包括开头 `"schema_version": "reconstruction_v2",` 和带引号的 `"generation_prompt": ...` 行。
 - `schema_version: "reconstruction_v2"` 继续保留在结构化 JSON 中，但不会再变成图片生成提示词正文。
+- JSON 结果视图明确标为结构 JSON，避免被误认为要发给 Image2 等图片生成器的提示词。
 - 真实可见文字保持原样，包括 UI 标签、印刷文字和画面中确实可见的类似 schema 标签；非可见的 source/reference 包装话术仍会被清理。
 - 清理面向生成器字段中的常见生成器专属语法，包括比例/权重参数、LoRA 标签、`BREAK`、括号 token 和 prompt weight。
 - 旧历史和不完整历史记录继续通过兼容 fallback 保持可复制。

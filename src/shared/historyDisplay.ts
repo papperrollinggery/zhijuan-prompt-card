@@ -265,12 +265,70 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function sanitizeGeneratorPromptText(prompt: string): string {
-  const trimmed = stripLeadingSchemaWrapper(prompt.trim());
+  const raw = prompt.trim();
+  const trimmed = stripLeadingSchemaWrapper(extractStructuredGenerationPrompt(raw) ?? raw);
   const sanitized = sanitizeQuotedWrapperTermsOutsideVisibleText(
     transformUnquotedSegments(trimmed, sanitizeUnquotedGeneratorPromptText)
   );
   const normalizedBoundaries = normalizeQuotedVisibleWordsHandoffBoundaries(sanitized);
   return normalizeUnquotedWhitespace(normalizedBoundaries).replace(finalDanglingConnectorPattern, '').trim();
+}
+
+function extractStructuredGenerationPrompt(prompt: string): string | undefined {
+  if (!prompt || !/\bgeneration_prompt\b/i.test(prompt) || !startsWithStructuredPromptContainer(prompt)) return undefined;
+
+  const parsed = parsePromptContainer(prompt);
+  const parsedPrompt = readStructuredGenerationPrompt(parsed);
+  if (parsedPrompt) return parsedPrompt;
+
+  const quotedMatch = prompt.match(/"?(?:json_prompt\.)?generation_prompt"?\s*[:：]\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/is);
+  if (quotedMatch) {
+    const rest = prompt.slice((quotedMatch.index ?? 0) + quotedMatch[0].length);
+    if (startsWithStructuredVisibleContinuation(rest)) return undefined;
+    return parseStructuredStringLiteral(quotedMatch[1]) ?? quotedMatch[1].slice(1, -1);
+  }
+
+  const bareMatch = prompt.match(/"?(?:json_prompt\.)?generation_prompt"?\s*[:：]\s*([^,}\n]+)/i);
+  return bareMatch?.[1]?.trim();
+}
+
+function startsWithStructuredPromptContainer(prompt: string): boolean {
+  return /^\s*\{/.test(prompt)
+    || /^\s*"?schema_version"?\s*[:：]/i.test(prompt)
+    || /^\s*"?(?:json_prompt\.)?generation_prompt"?\s*[:：]/i.test(prompt);
+}
+
+function parsePromptContainer(prompt: string): unknown {
+  const candidates = [prompt];
+  if (!/^\s*\{/.test(prompt)) candidates.push(`{${prompt.replace(/,\s*$/, '')}}`);
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Fall back to targeted extraction for JSON-ish fragments from model output.
+    }
+  }
+  return undefined;
+}
+
+function readStructuredGenerationPrompt(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.generation_prompt === 'string' && value.generation_prompt.trim()) return value.generation_prompt;
+  const jsonPrompt = value.json_prompt;
+  if (isRecord(jsonPrompt) && typeof jsonPrompt.generation_prompt === 'string' && jsonPrompt.generation_prompt.trim()) {
+    return jsonPrompt.generation_prompt;
+  }
+  return undefined;
+}
+
+function parseStructuredStringLiteral(value: string): string | undefined {
+  if (!value.startsWith('"')) return value.slice(1, -1);
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'string' ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function stripLeadingSchemaWrapper(prompt: string): string {
@@ -336,9 +394,15 @@ function stripLeadingUnquotedSchemaWrapper(prompt: string): string {
 }
 
 function stripLeadingStructuralPromptLabelWrapper(prompt: string): string {
-  const match = prompt.match(/^\s*(?:json_prompt\.)?generation_prompt\s*[:：]\s*/i);
+  const match = prompt.match(/^\s*"?(?:json_prompt\.)?generation_prompt"?\s*[:：]\s*/i);
   if (!match) return prompt;
-  return prompt.slice(match[0].length);
+  const rest = prompt.slice(match[0].length);
+  if (startsWithStructuredVisibleContinuation(rest)) return prompt;
+  const quoted = rest.match(/^\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/s);
+  if (!quoted) return rest;
+  if (startsWithStructuredVisibleContinuation(rest.slice(quoted[0].length))) return prompt;
+  const parsed = parseStructuredStringLiteral(quoted[1]);
+  return parsed ? `${parsed}${rest.slice(quoted[0].length)}` : rest;
 }
 
 const visibleSchemaContinuationSource = String.raw`(?:(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b)|(?:visible|legible)\s+as\b(?=[^.;\n]{0,120}\b(?:code\s+labels?|ui\s+labels?|labels?|text|lettering)\b))`;
@@ -346,6 +410,10 @@ const visibleSchemaContinuationPattern = new RegExp(String.raw`^(?:${visibleSche
 
 function startsWithVisibleSchemaContinuation(text: string): boolean {
   return visibleSchemaContinuationPattern.test(text);
+}
+
+function startsWithStructuredVisibleContinuation(text: string): boolean {
+  return startsWithVisibleSchemaContinuation(text.replace(/^\s*}?\s*[,.;]?\s*/, ''));
 }
 
 function startsWithVisibleImageLabelContinuation(text: string): boolean {

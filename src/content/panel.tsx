@@ -91,6 +91,7 @@ const copy = {
     },
     failed: 'Analysis failed',
     output: 'Prompt output',
+    outputJson: 'Structured JSON',
     copy: 'Copy',
     copyJson: 'Copy JSON data',
     copyNegative: 'Copy Negative',
@@ -168,6 +169,7 @@ const copy = {
     },
     failed: '识别失败',
     output: '提示词输出',
+    outputJson: '结构 JSON',
     copy: '复制',
     copyJson: '复制结构 JSON',
     copyNegative: '复制反向词',
@@ -1255,7 +1257,7 @@ function ResultBlock(
       <div className="zpc-prompt-output">
         <div className="zpc-result-head">
           <div>
-            <span>{props.labels.output}</span>
+            <span>{getOutputLabelForTab(tab, props.labels)}</span>
             <strong>{props.labels.outputCompleteness}: {completeness.label}</strong>
             {completeness.missing.length ? <small>{props.labels.missingPrefix}: {completeness.missing.join(', ')}</small> : null}
           </div>
@@ -1439,6 +1441,10 @@ function getCopyLabelForTab(tab: PanelTab, labels: (typeof copy)[UiLanguage]): s
   if (tab === 'json') return labels.copyJson;
   if (tab === 'negative') return labels.copyNegative;
   return labels.copy;
+}
+
+function getOutputLabelForTab(tab: PanelTab, labels: (typeof copy)[UiLanguage]): string {
+  return tab === 'json' ? labels.outputJson : labels.output;
 }
 
 function getCopyNoticeForTab(tab: PanelTab, labels: (typeof copy)[UiLanguage]): string {
