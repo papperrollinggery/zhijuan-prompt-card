@@ -217,6 +217,19 @@ assert.equal(
   'schema_version: reconstruction_v2 appears as a visible code label at the top; visual target glow behind it.'
 );
 
+const leadingUnquotedSchemaVisibleAsTextAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible-as unquoted schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'schema_version: reconstruction_v2, visible as a code label at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingUnquotedSchemaVisibleAsTextAnalysis),
+  'schema_version: reconstruction_v2, visible as a code label at the top; visual target glow behind it.'
+);
+
 const leadingQuotedSchemaWrapperAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for quoted schema wrapper', analysis: '' },
@@ -1327,6 +1340,26 @@ const generatorFlagSyntaxAnalysis = {
 };
 assert.equal(getGeneratorPrompt(generatorFlagSyntaxAnalysis), 'clean poster');
 
+const decimalGeneratorFlagSyntaxAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after decimal generator flag syntax', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'clean poster --v 6.1 with blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(decimalGeneratorFlagSyntaxAnalysis), 'clean poster with blue haze.');
+
+const equalsDecimalGeneratorFlagSyntaxAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after equals decimal generator flag syntax', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'clean poster --v=6.1 with blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(equalsDecimalGeneratorFlagSyntaxAnalysis), 'clean poster with blue haze.');
+
 const generatorNoFlagListAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after generator no-list syntax', analysis: '' },
@@ -1406,6 +1439,29 @@ const parentheticalPromptSyntaxAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(parentheticalPromptSyntaxAnalysis), 'blue haze clean poster');
+
+const referenceSheetPromptAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after reference-sheet wording', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use reference sheet layout with front and side views.'
+  }
+};
+assert.equal(getGeneratorPrompt(referenceSheetPromptAnalysis), 'Use reference sheet layout with front and side views.');
+
+const visibleTextThenGeneratorFlagAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after visible text followed by generator flag', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Poster title reads SALE --ar 16:9; source image glow behind the lettering.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(visibleTextThenGeneratorFlagAnalysis),
+  'Poster title reads SALE; visual target glow behind the lettering.'
+);
 
 const visibleTextWithReferenceWrapperAnalysis = {
   ...currentAnalysis,

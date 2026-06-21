@@ -198,7 +198,7 @@ const uploadRequestTailSource = String.raw`(?:\s+(?:for|as|to)\s+(?:(?!\s+(?:and
 const referenceVisualNounSource = String.raw`(?:images?|screenshots?|visuals?|photos?)`;
 const referenceInputObjectNounSource = String.raw`(?:${referenceVisualNounSource}|references?)`;
 const referenceRoleSource = String.raw`(?:(?:an?|the)\s+)?references?`;
-const bareReferenceObjectSource = String.raw`references?\b(?!\s+${referenceVisualNounSource})`;
+const bareReferenceObjectSource = String.raw`references?\b(?!\s+${referenceVisualNounSource})(?=\s*(?:[.;,\n]|$)|\s+(?:as|for|to|and|then)\b)`;
 const uploadReferenceObjectSource = String.raw`(?:(?:source|reference)\s+${referenceVisualNounSource}|uploaded\s+(?:(?:source|reference)\s+)?${referenceInputObjectNounSource}|${referenceVisualNounSource}\s+as\s+${referenceRoleSource}|${bareReferenceObjectSource})`;
 const uploadReferenceRequestSource = String.raw`(?:please\s+)?(?:upload|attach|provide)\s+(?:an?\s+|the\s+)?${uploadReferenceObjectSource}\b${uploadRequestTailSource}`;
 const referenceContextNounSource = String.raw`(?:(?:this|that|these|those)\s+|(?:(?:an?\s+|the\s+)?uploaded\s+))(?:source\s+|reference\s+)?${referenceInputObjectNounSource}`;
@@ -223,7 +223,9 @@ const leadingWithDetailPattern = /^(\s*)with\b/i;
 const leadingDetachedDetailPattern = new RegExp(String.raw`^\s+(?=(?:with\b|(?:and|then)\s+${handoffActionVerbSource}\b|${handoffActionVerbSource}\b))`, 'i');
 const leadingCreatePattern = /^(\s*)create\b/i;
 const generatorNoFlagPattern = /\s*--no\b(?:[=\s]+(?:(?!--[a-z]+\b)[^.;\n])+)?/gi;
-const generatorFlagPattern = /\s*--(?:ar|s|stylize|raw|iw|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+[^\s,.;]+)?/gi;
+const generatorFlagValueSource = String.raw`[A-Za-z0-9_:/-]+(?:\.[A-Za-z0-9_:/-]+)*`;
+const generatorFlagPattern = new RegExp(String.raw`\s*--(?:ar|s|stylize|raw|iw|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+${generatorFlagValueSource})?`, 'gi');
+const generatorSyntaxBoundaryPattern = /\s*(?:--(?:ar|s|stylize|raw|iw|no|chaos|seed|v|niji|q|quality|style)\b|<\s*lora:|\bBREAK\b)/i;
 const loraTagPattern = /<\s*lora:[^>]+>/gi;
 const breakTokenPattern = /\bBREAK\b/gi;
 const weightedParenthesisPattern = /\(([^()\n]{1,120}?):\s*-?\d+(?:\.\d+)?\)/g;
@@ -327,8 +329,11 @@ function stripLeadingUnquotedSchemaWrapper(prompt: string): string {
   return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
 }
 
+const visibleSchemaContinuationSource = String.raw`(?:(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b)|(?:visible|legible)\s+as\b(?=[^.;\n]{0,120}\b(?:code\s+labels?|ui\s+labels?|labels?|text|lettering)\b))`;
+const visibleSchemaContinuationPattern = new RegExp(String.raw`^(?:${visibleSchemaContinuationSource})`, 'i');
+
 function startsWithVisibleSchemaContinuation(text: string): boolean {
-  return /^(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+label|ui\s+label|text|lettering)\b)/i.test(text);
+  return visibleSchemaContinuationPattern.test(text);
 }
 
 function startsWithVisibleImageLabelContinuation(text: string): boolean {
@@ -451,8 +456,8 @@ const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels
 const visibleTextMarkerSource = String.raw`(?:(?:${visibleTextSubjectSource})\s+(?:reads|says|displays|shows)|(?:${visibleTextSubjectSource})\s*:|(?:sign|shirt|screen|poster|button)\s+with\s+text)\s+`;
 const bareVisibleTextMarkerSource = String.raw`(?:^|[.;\n]\s*)text\s+(?:reads|says|displays|shows)\s+`;
 const quotedVisibleWordsMarkerSource = String.raw`the\s+(?:words?|phrases?)\s+(?=(?:"[^"\n]{1,160}"|'[^'\n]{1,160}'|“[^”\n]{1,160}”|‘[^’\n]{1,160}’)\s+(?:appears?|is\s+printed|are\s+printed|printed)\b)`;
-const visibleSchemaMarkerSource = String.raw`schema_version\s*:\s*reconstruction_v2\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
-const visibleQuotedSchemaMarkerSource = String.raw`\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}?\s*[,.;]?\s+(?=(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b))`;
+const visibleSchemaMarkerSource = String.raw`schema_version\s*:\s*reconstruction_v2\s*[,.;]?\s+(?=${visibleSchemaContinuationSource})`;
+const visibleQuotedSchemaMarkerSource = String.raw`\{?\s*"schema_version"\s*:\s*"reconstruction_v2"\s*\}?\s*[,.;]?\s+(?=${visibleSchemaContinuationSource})`;
 const visibleTextMarkerPattern = new RegExp(String.raw`(?:${bareVisibleTextMarkerSource}|\b(?:${visibleTextMarkerSource}|${quotedVisibleWordsMarkerSource}|${visibleSchemaMarkerSource})|${visibleQuotedSchemaMarkerSource})`, 'gi');
 const wrapperContinuationTailSource = String.raw`(?=\s+(?:glow|lighting|light|lights|backlight|shadow|shadows|haze|texture|textures|detail|details|style|palette|colors?|composition|framing|crop|pose|background|foreground|subject|scene|around|behind|matching|match|inspired|guidance|context|reference|look|vibe|mood)\b)`;
 const wrapperContinuationEndSource = String.raw`(?:\s+(?:as|for))?${wrapperContinuationTailSource}`;
@@ -494,6 +499,7 @@ function findVisibleTextRunEnd(text: string, start: number): number {
       }
     }
     if (/[.;\n]/.test(text[i])) return i + 1;
+    if (startsWithGeneratorSyntaxBoundary(text, i)) return i;
     if (text[i] === ',' && startsWithInputRequestContinuation(text, i + 1)) return i;
     if (text[i] === ',' && startsWithCommaWrapperContinuation(text, i + 1)) return i + 1;
     if (startsWithConnectorInputRequestContinuation(text, i)) return i;
@@ -501,6 +507,10 @@ function findVisibleTextRunEnd(text: string, start: number): number {
     if (startsWithWrapperContinuation(text, i) && !isAfterComma(text, i)) return i;
   }
   return text.length;
+}
+
+function startsWithGeneratorSyntaxBoundary(text: string, start: number): boolean {
+  return generatorSyntaxBoundaryPattern.test(text.slice(start));
 }
 
 function startsWithWrapperContinuation(text: string, start: number): boolean {
