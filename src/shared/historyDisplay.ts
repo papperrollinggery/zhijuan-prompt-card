@@ -223,9 +223,13 @@ const leadingWithDetailPattern = /^(\s*)with\b/i;
 const leadingDetachedDetailPattern = new RegExp(String.raw`^\s+(?=(?:with\b|(?:and|then)\s+${handoffActionVerbSource}\b|${handoffActionVerbSource}\b))`, 'i');
 const leadingCreatePattern = /^(\s*)create\b/i;
 const generatorNoFlagPattern = /\s*--no\b(?:[=\s]+(?:(?!--[a-z]+\b)[^.;\n])+)?/gi;
-const generatorFlagValueSource = String.raw`[A-Za-z0-9_:/-]+(?:\.[A-Za-z0-9_:/-]+)*`;
-const generatorFlagPattern = new RegExp(String.raw`\s*--(?:ar|s|stylize|raw|iw|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+${generatorFlagValueSource})?`, 'gi');
-const generatorSyntaxBoundaryPattern = /\s*(?:--(?:ar|s|stylize|raw|iw|no|chaos|seed|v|niji|q|quality|style)\b|<\s*lora:|\bBREAK\b)/i;
+const generatorFlagValueSource = String.raw`[A-Za-z0-9_:/.-]+`;
+const generatorValuedFlagSource = String.raw`(?:ar|s|stylize|iw|chaos|seed|v|niji|q|quality|style|cref|cw|sref|sw)`;
+const generatorFlagPattern = new RegExp(
+  String.raw`\s*--${generatorValuedFlagSource}\b(?:[=\s]+${generatorFlagValueSource})?|\s*--[a-z][a-z0-9-]*\b(?:=${generatorFlagValueSource})?`,
+  'gi'
+);
+const generatorSyntaxBoundaryPattern = /\s*(?:--[a-z][a-z0-9-]*\b|<\s*lora:|\bBREAK\b)/i;
 const loraTagPattern = /<\s*lora:[^>]+>/gi;
 const breakTokenPattern = /\bBREAK\b/gi;
 const weightedParenthesisPattern = /\(([^()\n]{1,120}?):\s*-?\d+(?:\.\d+)?\)/g;
@@ -275,7 +279,9 @@ function stripLeadingSchemaWrapper(prompt: string): string {
   while (next !== previous) {
     previous = next;
     next = stripLeadingGeneratorLabelWrapper(
-      stripLeadingUnquotedSchemaWrapper(stripLeadingQuotedSchemaWrapper(stripLeadingBracedSchemaWrapper(next)))
+      stripLeadingStructuralPromptLabelWrapper(
+        stripLeadingUnquotedSchemaWrapper(stripLeadingQuotedSchemaWrapper(stripLeadingBracedSchemaWrapper(next)))
+      )
     ).trimStart();
   }
   return next;
@@ -329,6 +335,12 @@ function stripLeadingUnquotedSchemaWrapper(prompt: string): string {
   return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
 }
 
+function stripLeadingStructuralPromptLabelWrapper(prompt: string): string {
+  const match = prompt.match(/^\s*(?:json_prompt\.)?generation_prompt\s*[:：]\s*/i);
+  if (!match) return prompt;
+  return prompt.slice(match[0].length);
+}
+
 const visibleSchemaContinuationSource = String.raw`(?:(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+labels?|ui\s+labels?|text|lettering)\b)|(?:visible|legible)\s+as\b(?=[^.;\n]{0,120}\b(?:code\s+labels?|ui\s+labels?|labels?|text|lettering)\b))`;
 const visibleSchemaContinuationPattern = new RegExp(String.raw`^(?:${visibleSchemaContinuationSource})`, 'i');
 
@@ -345,7 +357,9 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
   return transformVisibleTextRuns(prompt, (segment) => {
     let removedUploadRequest = false;
     const hasDetachedInputRequestBoundary = detachedInputRequestBoundaryPattern.test(segment);
-    const markUploadRequestRemoved = () => {
+    const markUploadRequestRemoved = (match: string) => {
+      const retainedDetail = getRetainedReferenceRequestDetail(match);
+      if (retainedDetail) return retainedDetail;
       removedUploadRequest = true;
       return '';
     };
@@ -431,7 +445,7 @@ function sanitizeQuotedWrapperTermsOutsideVisibleText(text: string): string {
     }
 
     const quoted = text.slice(index + 1, endQuoteIndex);
-    const sanitized = isIndexInVisibleTextRun(text, index)
+    const sanitized = isIndexInVisibleTextRun(text, index) || isQuotedVisibleLabelContext(text, index)
       ? quoted
       : sanitizeQuotedWrapperTerms(quoted);
     output += `${text[index]}${sanitized}${text[endQuoteIndex]}`;
@@ -450,6 +464,27 @@ function sanitizeQuotedWrapperTerms(segment: string): string {
     .replace(/\bsource screenshot\b/gi, 'target screenshot')
     .replace(/\bsource visual\b/gi, 'visual target')
     .replace(/\bsource photo\b/gi, 'target photo');
+}
+
+function isQuotedVisibleLabelContext(text: string, quoteIndex: number): boolean {
+  const prefix = text.slice(Math.max(0, quoteIndex - 120), quoteIndex);
+  const boundary = Math.max(prefix.lastIndexOf('.'), prefix.lastIndexOf(';'), prefix.lastIndexOf('\n'));
+  const context = prefix.slice(boundary + 1);
+  return /\b(?:exact|visible|legible)\s+(?:text|labels?|words?|phrases?|title|caption|heading|headline|logo|watermark|button|sign|shirt)\s*$/i.test(context);
+}
+
+function getRetainedReferenceRequestDetail(match: string): string {
+  const detailMatch = match.match(/\b(?:for|as|to)\s+([^.;,\n]+)/i);
+  if (!detailMatch) return '';
+  const detail = detailMatch[1].trim();
+  if (!detail || isGenericReferenceRequestDetail(detail)) return '';
+  const leadingConnector = match.match(/^\s*(?:and|then)\s+/i)?.[0] ?? match.match(/^,\s*/)?.[0] ?? '';
+  const verb = leadingConnector ? 'use' : 'Use';
+  return `${leadingConnector}${verb} ${detail}`;
+}
+
+function isGenericReferenceRequestDetail(detail: string): boolean {
+  return /^(?:(?:an?|the)\s+)?(?:references?|guidance|guide|context|input|comparison|source|target)\b/i.test(detail);
 }
 
 const visibleTextSubjectSource = String.raw`(?:visible|legible)\s+(?:text|labels?)|(?:ui|code)\s+label\s+text|(?:ui|code)\s+labels?|(?:shirt|screen|poster|button|label|sign|logo|watermark|caption|heading|headline)\s+text|title|labels?|caption|logo|watermark|sign|shirt|heading|headline|button`;

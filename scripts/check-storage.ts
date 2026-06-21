@@ -106,6 +106,26 @@ assert(!handoffPrompt.includes('schema_version'));
 assert(!handoffPrompt.includes('reconstruction_v2'));
 assert(!/source image|reference image|recreate/i.test(handoffPrompt));
 
+const structuralGenerationPromptLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after structural generation label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'json_prompt.generation_prompt: Create a clean poster with source image glow.'
+  }
+};
+assert.equal(getGeneratorPrompt(structuralGenerationPromptLabelAnalysis), 'Create a clean poster with visual target glow.');
+
+const bareStructuralGenerationPromptLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after bare generation label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'generation_prompt: Create a clean poster with reference image glow.'
+  }
+};
+assert.equal(getGeneratorPrompt(bareStructuralGenerationPromptLabelAnalysis), 'Create a clean poster with visual target glow.');
+
 const standaloneRecreateAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt for standalone recreate', analysis: '' },
@@ -1360,6 +1380,16 @@ const equalsDecimalGeneratorFlagSyntaxAnalysis = {
 };
 assert.equal(getGeneratorPrompt(equalsDecimalGeneratorFlagSyntaxAnalysis), 'clean poster with blue haze.');
 
+const arbitraryGeneratorFlagSyntaxAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after arbitrary generator flag syntax', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Clean poster --cref abc123 --cw 80 --weird with blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(arbitraryGeneratorFlagSyntaxAnalysis), 'Clean poster with blue haze.');
+
 const generatorNoFlagListAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after generator no-list syntax', analysis: '' },
@@ -1450,6 +1480,16 @@ const referenceSheetPromptAnalysis = {
 };
 assert.equal(getGeneratorPrompt(referenceSheetPromptAnalysis), 'Use reference sheet layout with front and side views.');
 
+const referenceWrapperVisualCueAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after reference wrapper with visual cue', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Use this reference image for pose and lighting; keep blue haze.'
+  }
+};
+assert.equal(getGeneratorPrompt(referenceWrapperVisualCueAnalysis), 'Use pose and lighting; keep blue haze.');
+
 const visibleTextThenGeneratorFlagAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after visible text followed by generator flag', analysis: '' },
@@ -1526,6 +1566,19 @@ const quotedWrapperTermAnalysis = {
 assert.equal(
   getGeneratorPrompt(quotedWrapperTermAnalysis),
   'Use "visual target" lighting and \'visual target\' glow, while label reads "source image".'
+);
+
+const exactQuotedVisibleLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for exact quoted visible label', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Include exact label "source image" at top with reference image glow.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(exactQuotedVisibleLabelAnalysis),
+  'Include exact label "source image" at top with visual target glow.'
 );
 
 const quotedWholePromptWrapperAnalysis = {
