@@ -1,5 +1,25 @@
 # Verification
 
+## v0.3.3 Release Build
+
+- Prompt handoff regression: pass, `npm run check:storage`; covers schema wrapper stripping, Image2 prompt-label stripping, upload/reference wrapper stripping, visible-text preservation, shorthand `reference(s)`, plural `as references`, legacy fallback, and generator syntax cleanup.
+- JSON repair regression: pass, `npm run check:json-repair`.
+- Prompt goal coverage: pass, `npm run check:prompt-goal`; 60 contract rules, 12 simulated fidelity cases, 1 simulated JSON generator-readiness case.
+- Typecheck: pass, `npm run typecheck`.
+- Build: pass, `npm run build`.
+- Visual history smoke: pass, `npm run smoke:history`; 14, 35, and 100 record cases, running-history guard, and clear-sync guard passed.
+- Release package: pass, `npm run release:package`.
+- Release scan: pass, `npm run release:check`.
+- Package output: `release/zhijuan-prompt-card-0.3.3.zip`.
+- Package sha256: `0e16ae4074fcffe6a2574e6c0ce84b75588d887ba030a7e6d5f6c8ae5282090c`.
+- Dist manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
+- Zip manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
+- Diff whitespace: pass, `git diff --check`.
+- Thread review: pass, final Engineer / QA / Cold reviewer Codex worker threads found no P1/P2 blockers.
+- Cloud Codex review: pass on PR head `d3ed71f60c`; no major issues found before release documentation update.
+- v0.3.3 scope: generator-safe prompt handoff for normal copy, history copy, and Open in generator; structured JSON remains copyable; schema/Image2/reference-upload wrappers stay out of generator-facing prompt text unless they are true visible text.
+- Release status: pending final PR push, cloud review refresh, merge, tag, and GitHub release.
+
 ## v0.3.2 Test Build
 
 - Prompt optimization goal: pass, `npm run check:prompt-goal`.

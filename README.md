@@ -102,7 +102,7 @@ Image / Page Region / Local File
 - 本地图片上传。
 - 浮动 Prompt 面板。
 - 中文 / 英文 Prompt 输出。
-- JSON Prompt、Negative Prompt 和 Style Tags。英文 Prompt 是主要复刻提示词。
+- JSON Prompt、Negative Prompt 和 Style Tags。普通复制和生成器跳转使用清理后的生成器提示词；结构化 JSON 仍可单独复制。
 - 在可见证据支持时保留真人 / 角色 / 作品 / 场景识别锚点。
 - Prompt 输出包含 `style_index 0-100`、原图复原优先级、摄影/影视/镜头/滤镜 cue、材质锁定、原文/版式保留、截图保真和图片专属防漂移反向词。
 - Visual History MVP，本地缩略图历史。
@@ -113,6 +113,30 @@ Image / Page Region / Local File
 - 打开 ChatGPT、Gemini、Midjourney、即梦、Lovart、Codex 继续使用。
 - Options 页面配置 Base URL、API Key、Model、默认生成器和语言。
 - 默认不绑定任何 Zhijuan 云端服务。
+
+## Generator Handoff v0.3.3 / 生成器交接 v0.3.3
+
+v0.3.3 makes copied generator prompts cleaner for Image2 and other external image generators while keeping structured JSON available for debugging and advanced workflows.
+
+v0.3.3 优化复制到 Image2 等外部图像生成器的提示词，同时继续保留结构化 JSON，供调试和高级流程使用。
+
+**English**
+
+- Normal Copy, history Copy, and Open in generator now use a generator-safe prompt.
+- Structural JSON labels, Image2 labels, and reference-upload instructions are removed from generator-facing prompt text.
+- `schema_version: "reconstruction_v2"` remains in the JSON tab, but no longer appears as the image prompt unless it is truly visible text in the source image.
+- Visible UI labels, printed words, and visible schema-like labels are preserved when they are part of the image.
+- Common generator-specific syntax such as flags, prompt weights, LoRA tags, brackets, and `BREAK` is removed from generator-facing fields.
+- Legacy history records remain copyable through fallback handling.
+
+**中文**
+
+- 普通复制、历史复制和“打开生成器”现在使用适合直接生成图片的安全提示词。
+- 结构化 JSON 标签、Image2 标签和参考图上传指令不会再进入面向生成器的提示词正文。
+- `schema_version: "reconstruction_v2"` 仍保留在 JSON 标签页中，但除非它确实是原图可见文字，否则不会出现在图片提示词里。
+- UI 标签、印刷文字和画面中真实可见的类似 schema 标签会被保留。
+- 面向生成器的字段会移除常见生成器专属语法，例如参数 flag、prompt weight、LoRA 标签、括号 token 和 `BREAK`。
+- 旧历史记录继续通过 fallback 保持可复制。
 
 ## Prompt Output v0.3.2 / 提示词输出 v0.3.2
 
