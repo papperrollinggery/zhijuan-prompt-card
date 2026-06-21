@@ -172,36 +172,21 @@ assert(
 );
 
 const correctedGeneratorJson = JSON.parse(stringifyGeneratorJsonPrompt(correctedFrameParsed));
-for (const field of [
-  'prompt',
-  'aspect_ratio',
-  'prompt_core',
-  'subject',
-  'action_pose',
-  'details_appearance',
-  'environment_background',
-  'lighting_atmosphere',
-  'composition_framing',
-  'style_camera',
-  'quality_modifiers',
-  'spatial_dynamics',
-  'text_elements',
-  'reconstruction_priorities',
-  'style_tags'
-]) {
-  const serialized = JSON.stringify(correctedGeneratorJson[field]);
-  assert(!/15\s*:\s*8/i.test(serialized), `generator JSON ${field} still exposes wrong aspect ratio`);
-  assert(
-    !/\b(?:horizontal|landscape|widescreen)\b/i.test(serialized),
-    `generator JSON ${field} still exposes wrong orientation`
-  );
-}
+assert(correctedGeneratorJson.task === 'image_reconstruction', 'generator JSON should expose a structured image reconstruction task');
+assert(correctedGeneratorJson.prompt === undefined, 'generator JSON should not use a prompt-first top-level field');
+assert(correctedGeneratorJson.description === correctedGenerationPrompt, 'generator JSON description should match the corrected generator prompt');
+assert(correctedGeneratorJson.composition?.aspect_ratio === '3:4', 'generator JSON composition is missing corrected source aspect ratio');
+assert(!/15\s*:\s*8/i.test(JSON.stringify([correctedGeneratorJson.description, correctedGeneratorJson.composition])), 'generator JSON still exposes wrong aspect ratio');
 assert(
-  correctedGeneratorJson.negative_prompt.includes('horizontal poster'),
+  !/\b(?:horizontal|landscape|widescreen)\b/i.test(JSON.stringify([correctedGeneratorJson.description, correctedGeneratorJson.composition])),
+  'generator JSON still exposes wrong orientation'
+);
+assert(
+  correctedGeneratorJson.constraints.negative_prompt.includes('horizontal poster'),
   'generator JSON negative_prompt is missing corrected portrait blocker'
 );
 assert(
-  !/vertical poster|portrait crop/i.test(correctedGeneratorJson.negative_prompt),
+  !/vertical poster|portrait crop/i.test(correctedGeneratorJson.constraints.negative_prompt),
   'generator JSON negative_prompt still blocks the real portrait source frame'
 );
 

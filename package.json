@@ -18,6 +18,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "check:api-options": "tsx scripts/check-api-options.ts",
+    "check:content-script": "node scripts/check-content-script-pages.mjs",
+    "check:extension-pages": "node scripts/check-extension-pages.mjs",
     "check:json-repair": "tsx scripts/check-json-repair.ts",
     "check:prompt-goal": "node scripts/check-prompt-goal.mjs",
     "check:storage": "tsx scripts/check-storage.ts",

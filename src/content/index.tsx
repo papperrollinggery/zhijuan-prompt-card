@@ -26,15 +26,17 @@ const canceledAnalysisIds = new Set<string>();
 (window as unknown as Record<string, string>)[INSTANCE_KEY] = instanceId;
 
 ensurePanelRoot();
-void loadSettingsIntoUi();
-void refreshHistory();
+runContentTask(loadSettingsIntoUi());
+runContentTask(refreshHistory());
 installSettingsListener();
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!isActiveInstance()) return false;
-  void handleMessage(message)
-    .then((data) => sendResponse({ ok: true, data } satisfies RuntimeResponse))
-    .catch((error: unknown) => sendResponse({ ok: false, error: errorToMessage(error) } satisfies RuntimeResponse));
+  runContentTask(
+    handleMessage(message)
+      .then((data) => sendResponseSafely(sendResponse, { ok: true, data } satisfies RuntimeResponse))
+      .catch((error: unknown) => sendResponseSafely(sendResponse, { ok: false, error: errorToMessage(error) } satisfies RuntimeResponse))
+  );
   return true;
 });
 
@@ -68,15 +70,19 @@ async function loadSettingsIntoUi(): Promise<void> {
 }
 
 function installSettingsListener(): void {
-  chrome.storage?.onChanged?.addListener((changes, areaName) => {
-    if (areaName !== 'local') return;
-    if (changes[STORAGE_KEYS.settings]) void loadSettingsIntoUi();
-    if (changes[STORAGE_KEYS.history]) {
-      historyEntries = Array.isArray(changes[STORAGE_KEYS.history].newValue) ? changes[STORAGE_KEYS.history].newValue as HistoryEntry[] : [];
-      recoverSuccessfulHistory(historyEntries);
-      if (panelState.open) render();
-    }
-  });
+  try {
+    chrome.storage?.onChanged?.addListener((changes, areaName) => {
+      if (areaName !== 'local') return;
+      if (changes[STORAGE_KEYS.settings]) runContentTask(loadSettingsIntoUi());
+      if (changes[STORAGE_KEYS.history]) {
+        historyEntries = Array.isArray(changes[STORAGE_KEYS.history].newValue) ? changes[STORAGE_KEYS.history].newValue as HistoryEntry[] : [];
+        recoverSuccessfulHistory(historyEntries);
+        if (panelState.open) render();
+      }
+    });
+  } catch (error) {
+    handleContentTaskError(error);
+  }
 }
 
 function hasActivePanelWork(): boolean {
@@ -236,27 +242,27 @@ function render(): void {
       onClose={() => setPanelState({ open: true, notice: undefined, picking: undefined })}
       onHide={() => {
         floatingHiddenByUser = true;
-        void saveFloatingButtonPreference(false);
+        runContentTask(saveFloatingButtonPreference(false));
         setPanelState({ open: false, loading: false, error: undefined, notice: undefined, picking: undefined });
       }}
       onOpen={() => setPanelState({ open: true, loading: false, error: undefined })}
-      onLanguageChange={(language) => void changeInterfaceLanguage(language)}
-      onStartAreaSelect={() => void runSelectionAnalysis()}
-      onStartImagePick={() => void runImagePickAnalysis()}
-      onAnalyzeFile={(file) => void runLocalFileAnalysis(file)}
-      onOpenHistory={() => void openHistory()}
+      onLanguageChange={(language) => runContentTask(changeInterfaceLanguage(language))}
+      onStartAreaSelect={() => runContentTask(runSelectionAnalysis())}
+      onStartImagePick={() => runContentTask(runImagePickAnalysis())}
+      onAnalyzeFile={(file) => runContentTask(runLocalFileAnalysis(file))}
+      onOpenHistory={() => runContentTask(openHistory())}
       onCloseHistory={() => setPanelState({ view: 'main' })}
-      onRefreshHistory={() => void refreshHistory()}
+      onRefreshHistory={() => runContentTask(refreshHistory())}
       onSelectHistoryEntry={(entry) => selectHistoryEntry(entry)}
-      onDeleteHistoryEntry={(id) => void deleteHistory(id)}
-      onClearHistory={() => void clearAllHistory()}
-      onOpenSettings={() => void openSettings()}
-      onOpenUpdateSettings={() => void openSettings('update')}
-      onCopy={(text, label) => void copyText(text, label)}
-      onRegenerate={() => void regenerate()}
+      onDeleteHistoryEntry={(id) => runContentTask(deleteHistory(id))}
+      onClearHistory={() => runContentTask(clearAllHistory())}
+      onOpenSettings={() => runContentTask(openSettings())}
+      onOpenUpdateSettings={() => runContentTask(openSettings('update'))}
+      onCopy={(text, label) => runContentTask(copyText(text, label))}
+      onRegenerate={() => runContentTask(regenerate())}
       onCancelAnalysis={() => cancelCurrentWork()}
-      onOpenGenerator={(siteId, prompt) => void openGenerator(siteId, prompt)}
-      onToggleFavorite={(id, favorite) => void toggleFavorite(id, favorite)}
+      onOpenGenerator={(siteId, prompt) => runContentTask(openGenerator(siteId, prompt))}
+      onToggleFavorite={(id, favorite) => runContentTask(toggleFavorite(id, favorite))}
     />
   );
 }
@@ -327,7 +333,7 @@ function beginWork(): number {
   cancelActiveSelectionOverlay();
   if (activeAnalysisId) {
     canceledAnalysisIds.add(activeAnalysisId);
-    void sendRuntimeMessage({ type: 'CANCEL_ANALYSIS', payload: { id: activeAnalysisId } }).catch(() => undefined);
+    runContentTask(sendRuntimeMessage({ type: 'CANCEL_ANALYSIS', payload: { id: activeAnalysisId } }));
     activeAnalysisId = undefined;
   }
   activeWorkToken += 1;
@@ -353,7 +359,7 @@ function cancelCurrentWork(): void {
   if (id) {
     canceledAnalysisIds.add(id);
     activeAnalysisId = undefined;
-    void sendRuntimeMessage({ type: 'CANCEL_ANALYSIS', payload: { id } }).catch(() => undefined);
+    runContentTask(sendRuntimeMessage({ type: 'CANCEL_ANALYSIS', payload: { id } }));
   }
   const entry = panelState.entry?.status === 'running' ? { ...panelState.entry, status: 'canceled' as const, error: getCanceledText() } : panelState.entry;
   setPanelState({ open: true, view: 'main', loading: false, error: undefined, entry, target: lastTarget || panelState.target, picking: undefined, notice: getCanceledText(), phase: undefined, startedAt: undefined });
@@ -510,15 +516,55 @@ function getSelectionCopy() {
 
 function sendRuntimeMessage<T = unknown>(message: unknown): Promise<T> {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (response: RuntimeResponse<T>) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
-      if (!response?.ok) reject(new Error(response?.error || 'Runtime request failed.'));
-      else resolve(response.data as T);
-    });
+    if (!isRuntimeAvailable()) {
+      reject(new Error('Extension context invalidated.'));
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage(message, (response: RuntimeResponse<T>) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response?.ok) reject(new Error(response?.error || 'Runtime request failed.'));
+        else resolve(response.data as T);
+      });
+    } catch (error) {
+      reject(error);
+    }
   });
+}
+
+function runContentTask(task: Promise<unknown>): void {
+  task.catch(handleContentTaskError);
+}
+
+function handleContentTaskError(error: unknown): void {
+  if (isExtensionContextInvalidated(error)) {
+    activeWorkToken += 1;
+    activeAnalysisId = undefined;
+    if (root) {
+      setPanelState({ open: true, loading: false, error: errorToMessage(error), picking: undefined, phase: undefined, startedAt: undefined });
+    }
+    return;
+  }
+  console.error(error);
+}
+
+function sendResponseSafely<T>(sendResponse: (response?: RuntimeResponse<T>) => void, response: RuntimeResponse<T>): void {
+  try {
+    sendResponse(response);
+  } catch (error) {
+    handleContentTaskError(error);
+  }
+}
+
+function isRuntimeAvailable(): boolean {
+  try {
+    return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.id) && typeof chrome.runtime.sendMessage === 'function';
+  } catch {
+    return false;
+  }
 }
 
 async function writeClipboardText(text: string): Promise<void> {
@@ -549,4 +595,8 @@ function errorToMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (/extension context invalidated/i.test(message)) return '扩展已重新加载，请从工具栏重新打开面板。';
   return message;
+}
+
+function isExtensionContextInvalidated(error: unknown): boolean {
+  return /extension context invalidated/i.test(error instanceof Error ? error.message : String(error));
 }

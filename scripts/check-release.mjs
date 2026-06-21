@@ -88,6 +88,24 @@ function checkReadmeImages() {
   }
 }
 
+function checkExtensionHtml() {
+  for (const fileName of ['popup.html', 'options.html']) {
+    const html = readFileSync(join(root, 'dist', fileName), 'utf8');
+    assert(!/rel=["']modulepreload["']/i.test(html), `${fileName} should not use modulepreload in the extension shell`);
+    assert(/<script type="module" src="assets\/[^"]+\.js"><\/script>/.test(html), `${fileName} missing local module script`);
+    assert(/<link rel="stylesheet" href="assets\/[^"]+\.css" \/>/.test(html), `${fileName} missing local stylesheet`);
+  }
+}
+
+function checkContentScriptSyntax(label, text) {
+  assert(!/\?\.|\?\?/.test(text), `${label} should not contain optional chaining or nullish coalescing tokens`);
+  try {
+    execFileSync(process.execPath, ['--check', '-'], { input: text, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+  } catch (error) {
+    fail(`${label} is not valid JavaScript: ${error.stderr || error.message}`);
+  }
+}
+
 function checkZip() {
   assert(existsSync(releaseZip), `missing release zip: ${relative(root, releaseZip)}`);
   const entries = zipEntries(releaseZip);
@@ -97,6 +115,11 @@ function checkZip() {
 
   const manifest = JSON.parse(readZipEntry(releaseZip, 'manifest.json'));
   assert(manifest.version === packageJson.version, `zip manifest version ${manifest.version} does not match package ${packageJson.version}`);
+  for (const fileName of ['popup.html', 'options.html']) {
+    const html = readZipEntry(releaseZip, fileName);
+    assert(!/rel=["']modulepreload["']/i.test(html), `zip ${fileName} should not use modulepreload in the extension shell`);
+  }
+  checkContentScriptSyntax('zip:content.js', readZipEntry(releaseZip, 'content.js'));
 
   for (const entry of entries) {
     if (entry.endsWith('/')) continue;
@@ -108,6 +131,8 @@ function checkZip() {
 assert(existsSync(distManifestPath), 'dist/manifest.json missing; run npm run build first');
 assert(readJson(distManifestPath).version === packageJson.version, 'dist manifest version does not match package.json');
 checkReadmeImages();
+checkExtensionHtml();
+checkContentScriptSyntax('dist/content.js', readFileSync(join(root, 'dist/content.js'), 'utf8'));
 
 for (const file of await walk(root)) {
   if (!textExtensions.has(extname(file))) continue;

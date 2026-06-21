@@ -23,6 +23,8 @@ A prompt optimization is ready only when all of these are true:
 - The top-level JSON shape still matches `PromptAnalysis`.
 - `json_prompt.generation_prompt` is treated as the strongest generator handoff prompt, with `en.prompt` kept as the natural-language English fallback.
 - `json_prompt.generation_prompt`, `json_prompt.generation_negative_prompt`, and `json_prompt.spatial_dynamics` make the JSON data self-contained without requiring users to paste the full schema object into image generators.
+- Generator-facing JSON is a structured reconstruction prompt, not the internal analysis schema and not a prompt-first wrapper. It should contain generator-ready fields that external image tools can act on directly, such as `task`, `adaptive_modules`, `subject`, `composition`, `style`, `atmosphere`, `color_palette`, `materials_texture`, `text_elements`, `constraints`, and auxiliary `description`.
+- Internal analysis fields such as `schema_version`, raw `style_camera`, raw `fidelity_priorities`, raw `observation_units`, and raw `reconstruction_priorities` must not be copied verbatim. Their useful cues may be normalized into generator-facing structure only when aligned with `json_prompt.generation_prompt`.
 - The prompt contract starts from faithful observation, then activates only the constraints that help reconstruct the current image.
 - `json_prompt.schema_version` is `reconstruction_v2` for new model output, while legacy JSON fields stay populated for compatibility.
 - `json_prompt.global_fingerprint`, `json_prompt.observation_units`, `json_prompt.text_elements`, and `json_prompt.reconstruction_priorities` carry a dynamic reconstruction evidence layer without forcing image-type-specific templates.
@@ -40,6 +42,8 @@ A prompt optimization is ready only when all of these are true:
 - Text-heavy posters, UI, screenshots, logos, ads, tickets, and documents preserve original language, script, layout, hierarchy, dates, numbers, and positions when legible. They must not translate or reorder visible text.
 - Screenshot and UI inputs are described as screenshots or UI captures, preserving crop, layout, visible text language, overlay z-order, panels, and edge cuts while reconstructing a clean readable version by default. Thumbnail blur, accidental compression, and downsampled low resolution are not preserved unless they are clearly intentional visual style.
 - The prompt contract prioritizes aspect ratio, crop, subject scale, subject count, relative placement, camera geometry, viewpoint, motion/focus, background anchors, lighting, material finish, texture, and medium.
+- The prompt contract separates visible subject matter from rendering style. It locks medium, abstraction level, line quality, color-block behavior, detail budget, and ornament density before naming genre, era, culture, franchise, art movement, costume type, or brand system.
+- Style and detail blockers must stay conditional. Negative prompts block wrong medium, wrong realism level, wrong detail budget, added ornament, glossy retouching, and invented background complexity only when those are plausible drift risks for the current source.
 - The prompt contract uses `style_index 0-100` as a plain-language stylization cue, not as a generator-specific parameter.
 - `json_prompt.fidelity_priorities` uses plain-language `priority N of 100` reconstruction cues, not generator-specific weights or model parameters, and high-priority items are reflected in `en.prompt`.
 - `json_prompt.reconstruction_priorities` may use numeric 0-100 priority values as plain JSON rankings. They are not generator weights, bracket syntax, Midjourney weights, or Stable Diffusion emphasis syntax.
@@ -127,6 +131,7 @@ The simulation does not call external models. It validates the prompt output sha
 - fidelity priorities preserved as plain-language 0-100 reconstruction priorities and compiled into the English prompt when they affect reconstruction
 - dynamic reconstruction evidence preserved through `global_fingerprint`, `observation_units`, `text_elements`, and `reconstruction_priorities`
 - JSON-local `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics` preserve the same load-bearing facts when a user copies the generator prompt from stored JSON data
+- generator-facing JSON remains structured: it exposes model-selected adaptive modules plus aligned atmosphere, subject, composition, style, color, text, material, and constraint cues without exporting internal schema/raw analysis fields or making `prompt` the top-level driver
 - JSON-local negative prompt compiles high-priority drift blockers from the evidence layer instead of trusting item count alone
 - source-defining reconstruction skeleton and boundary clarity compiled into early `en.prompt` only when they are load-bearing
 - simple images remain compact and are not forced into dense multi-region analysis
@@ -149,6 +154,8 @@ Before accepting a prompt change:
 - Check whether the rules preserve strong composition, camera geometry, material behavior, and motion.
 - Check whether recognizable subjects, works, stories, places, or scenes are captured instead of flattened into generic descriptors.
 - Check whether style_index and professional camera/cinema language are used only when useful and never forced onto casual phone photos.
+- Check whether named styles, eras, costumes, franchises, and art movements are supported by the source rendering rather than inferred from subject matter alone.
+- Check whether generator-facing JSON is minimal and does not duplicate internal analysis fields that could amplify a mistaken interpretation.
 - Check whether fidelity priorities resolve source conflicts such as soft optical atmosphere versus crisp commercial detail without adding generator-specific parameter syntax.
 - Check whether real-person outputs preserve visible face shape, skin tone/undertone, natural skin texture, facial proportions, hair texture, body proportions, pose, clothing, and casual authenticity.
 - Check whether cautious ethnic/ancestry presentation is included only when visually useful and paired with concrete traits, instead of being omitted or asserted as verified identity.

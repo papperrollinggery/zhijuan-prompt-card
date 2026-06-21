@@ -7,6 +7,8 @@ import manifest from './src/manifest';
 
 const rootDir = __dirname;
 const distDir = resolve(rootDir, 'dist');
+const extensionTarget = 'es2019';
+const productionDefine = { 'process.env.NODE_ENV': '"production"' };
 
 function extensionBuildPlugin(): Plugin {
   return {
@@ -18,7 +20,8 @@ function extensionBuildPlugin(): Plugin {
         bundle: true,
         outfile: resolve(distDir, 'background.js'),
         format: 'esm',
-        target: ['chrome120'],
+        target: [extensionTarget],
+        define: productionDefine,
         sourcemap: false,
         logLevel: 'silent'
       });
@@ -28,7 +31,8 @@ function extensionBuildPlugin(): Plugin {
         bundle: true,
         outfile: resolve(distDir, 'content.js'),
         format: 'iife',
-        target: ['chrome120'],
+        target: [extensionTarget],
+        define: productionDefine,
         sourcemap: false,
         jsx: 'automatic',
         loader: {
@@ -56,7 +60,6 @@ async function writeExtensionHtml(fileName: string, title: string, entryName: st
       '    <meta charset="UTF-8" />',
       '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />',
       `    <title>${title}</title>`,
-      '    <link rel="modulepreload" href="assets/jsx-runtime.js" />',
       `    <link rel="stylesheet" href="assets/${entryName}.css" />`,
       `    <script type="module" src="assets/${entryName}.js"></script>`,
       '  </head>',
@@ -77,10 +80,11 @@ async function copyStaticFile(from: string, to: string) {
 
 export default defineConfig({
   plugins: [react(), extensionBuildPlugin()],
+  define: productionDefine,
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    target: 'chrome120',
+    target: extensionTarget,
     rollupOptions: {
       input: {
         popup: resolve(rootDir, 'src/popup/index.html'),

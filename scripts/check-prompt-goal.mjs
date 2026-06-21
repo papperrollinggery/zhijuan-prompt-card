@@ -13,6 +13,7 @@ const imageDataPath = join(root, 'src/shared/imageData.ts');
 const apiClientPath = join(root, 'src/shared/apiClient.ts');
 const packageJsonPath = join(root, 'package.json');
 const jsonRepairTestPath = join(root, 'scripts/check-json-repair.ts');
+const storageTestPath = join(root, 'scripts/check-storage.ts');
 const manualRealTestPath = join(root, 'scripts/manual-real-extension-test.mjs');
 const realStructureAuditPath = join(root, 'scripts/real-image-structural-audit.ts');
 const realJsonAuditPath = join(root, 'scripts/real-image-json-readiness-audit.ts');
@@ -28,6 +29,7 @@ const imageDataSource = readFileSync(imageDataPath, 'utf8');
 const apiClientSource = readFileSync(apiClientPath, 'utf8');
 const packageJsonSource = readFileSync(packageJsonPath, 'utf8');
 const jsonRepairTestSource = readFileSync(jsonRepairTestPath, 'utf8');
+const storageTestSource = readFileSync(storageTestPath, 'utf8');
 const manualRealTestSource = readFileSync(manualRealTestPath, 'utf8');
 const realStructureAuditSource = readFileSync(realStructureAuditPath, 'utf8');
 const realJsonAuditSource = readFileSync(realJsonAuditPath, 'utf8');
@@ -77,6 +79,8 @@ const jsonPromptKeys = [
 const contractChecks = [
   ['source fidelity is first-class', 'Source fidelity first'],
   ['aesthetic fingerprint is first-class', 'Aesthetic fingerprint'],
+  ['style fingerprint separates rendering from subject', 'separate visible subject matter from rendering style'],
+  ['style fingerprint locks abstraction/detail budget', 'lock medium, abstraction level, line quality, color blocks, detail budget, and ornament density'],
   ['observed facts are still required', 'Observed facts'],
   ['output discipline is retained', 'Output discipline'],
   ['quality is conditional', 'Quality only when source supports it'],
@@ -113,6 +117,10 @@ const contractChecks = [
   ['JSON negative prompt mirrors top-level negative', 'generation_negative_prompt must mirror negative_prompt'],
   ['JSON negative prompt compiles high-priority drift blockers', 'include high-priority avoid_drift, risk_if_missing, missing text, wrong orientation/aspect, motion, material, boundary blockers'],
   ['JSON dynamic relationships are not array-only', 'Do not leave motion, floating/suspended objects, contact/support, z-depth, text placement, material/surface behavior, optical finish, or occlusion only in arrays'],
+  ['natural prompts and JSON roles are separated', 'Natural prompts and structured JSON have different jobs'],
+  ['JSON is not natural prompt stuffing', 'do not stuff the natural-language prompt into JSON fields as the main structure'],
+  ['whole-image atmosphere can be its own unit', 'Treat whole-image atmosphere as its own reconstruction unit'],
+  ['atmosphere mood observation unit exists', 'atmosphere_mood'],
   ['fidelity priorities are plain-language controls', 'fidelity_priorities are plain-language reconstruction priorities'],
   ['fidelity priorities use 0-100 wording', 'priority N of 100'],
   ['high-priority fidelity must reach English prompt', 'Every high-priority fidelity item must be compiled into en.prompt'],
@@ -123,6 +131,9 @@ const contractChecks = [
   ['source-defining skeleton enters English prompt', 'source-defining reconstruction skeleton'],
   ['layout skeleton appears before local detail', 'Compile this skeleton into the first third of en.prompt'],
   ['boundary clarity is source-dependent', 'Preserve boundary clarity as observed'],
+  ['style categories require visible source support', 'Do not infer genre lore, period, role, costume type, art school, brand system, franchise, or medium from subject matter alone'],
+  ['low-detail source prompt leads with observed finish', 'lead en.prompt and json_prompt.generation_prompt with the observed finish'],
+  ['wrong style-detail drift is conditionally blocked', 'Add wrong-style/detail blockers only when likely for that source'],
   ['local detail cannot crowd out structure', 'Local objects must not crowd out the source-defining structure'],
   ['detail budget controls dense prompts', 'Use detail_budget observation units'],
   ['priority values are plain JSON ranking', 'priority is a plain JSON ranking from 0 to 100'],
@@ -135,6 +146,8 @@ const contractChecks = [
   ['dense sources can expand as needed', 'should expand as needed'],
   ['dense sources must not be over-compressed', 'Do not squeeze load-bearing structure into a generic archetype'],
   ['negative prompt is image-specific', 'negative_prompt is image-specific'],
+  ['negative prompt blocks wrong style budget', 'wrong medium/style/detail budget'],
+  ['simple sources block over-detailed redesign only when likely', 'add over-realistic, over-detailed, ornate, glossy, or invented-background blockers only when likely'],
   ['nonlinear geometry drift is blocked in negative prompt', 'block straightened bands, rectangular panels, uniform grids, equalized zones, and lost boundary lines'],
   ['source blur is not blocked globally', 'Do not put blur, grain, haze, bloom, low resolution'],
   ['soft-source blockers target polish drift', 'over-sharpened face, glossy AI skin, hyper-detailed eyes'],
@@ -767,13 +780,29 @@ assert(!systemPrompt.includes('"ja"'), 'system prompt should not request hidden 
 assert(!systemPrompt.includes('"ja_style_tags"'), 'system prompt should not request hidden Japanese style tags.');
 assert(!systemPrompt.includes('"recreation_prompt"'), 'system prompt should not request a duplicate recreation_prompt field.');
 assert(systemPrompt.length >= 5200, 'system prompt is unexpectedly short for the fusion reconstruction contract.');
-assert(systemPrompt.length <= 16500, 'system prompt is too long; keep the runtime prompt compact enough for API use.');
+assert(systemPrompt.length <= 17500, 'system prompt is too long; keep the runtime prompt compact enough for API use.');
 assert(!panelSource.includes('analysis[tab].prompt}\\n\\n${analysis[tab].analysis'), 'language tab output must not concatenate prompt and analysis.');
 assert(panelSource.includes("if (tab === 'en') return getGeneratorPrompt(analysis);"), 'English tab should display/copy the generator-safe prompt text.');
 assert(panelSource.includes("if (tab === 'json') return stringifyGeneratorJsonPrompt(analysis);"), 'JSON tab should display/copy generator-facing JSON prompt, not internal structured JSON.');
 assert(panelSource.includes('props.onOpenGenerator(siteId, generatorPrompt)'), 'generator handoff must use the generator-safe prompt.');
 assert(popupHistorySource.includes('stringifyGeneratorJsonPrompt(entry.analysis)'), 'popup history JSON copy should use generator-facing JSON prompt.');
-assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'prompt', getGeneratorPrompt(analysis));"), 'generator JSON prompt should put the generator-safe prompt first.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'task', 'image_reconstruction');"), 'generator JSON prompt should expose a structured image reconstruction task.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'adaptive_modules'"), 'generator JSON prompt should expose model-selected adaptive modules.');
+assert(historyDisplaySource.includes('toGeneratorAdaptiveModules'), 'generator JSON prompt should normalize dynamic observation units into adaptive modules.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'atmosphere'"), 'generator JSON prompt should expose whole-image atmosphere as a structured unit.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'description', description);"), 'generator JSON prompt should keep the generator-safe prompt only as an auxiliary description.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'prompt'"), 'generator JSON prompt should not use a prompt-first top-level field.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(composition, 'aspect_ratio'"), 'generator JSON prompt should expose aspect ratio inside composition when available.');
+assert(historyDisplaySource.includes("setAlignedGeneratorJsonField(output, 'subject'"), 'generator JSON prompt should expose prompt-aligned structured subject cues.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'color_palette'"), 'generator JSON prompt should expose structured color palette cues.');
+assert(historyDisplaySource.includes("toGeneratorTextElements"), 'generator JSON prompt should expose structured visible text cues.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(constraints, 'negative_prompt'"), 'generator JSON prompt should expose matching negative prompt inside constraints.');
+assert(historyDisplaySource.includes('isPromptAlignedGeneratorValue'), 'generator JSON prompt should filter structure fields that conflict with the compiled description.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'style_camera'"), 'generator JSON prompt should not export raw internal style_camera analysis.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'materials'"), 'generator JSON prompt should not export raw internal materials analysis.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'fidelity_priorities'"), 'generator JSON prompt should not export internal fidelity priorities.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'reconstruction_priorities'"), 'generator JSON prompt should not export internal reconstruction priorities.');
+assert(!historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'observation_units'"), 'generator JSON prompt should not export raw internal observation units.');
 assert(historyDisplaySource.includes('analysis?.json_prompt?.generation_prompt'), 'generator prompt helper should use json_prompt.generation_prompt.');
 assert(
   historyDisplaySource.indexOf('analysis?.json_prompt?.generation_prompt') < historyDisplaySource.indexOf('legacyAnalysis?.recreation_prompt'),
@@ -810,9 +839,11 @@ assert(
   'JSON repair test should guard the actual generator-facing JSON export path.'
 );
 assert(
-  jsonRepairTestSource.includes('generator JSON ${field} still exposes wrong aspect ratio'),
-  'JSON repair test should guard exported JSON fields beyond generation_prompt.'
+  jsonRepairTestSource.includes('generator JSON should not use a prompt-first top-level field'),
+  'JSON repair test should guard structured generator-facing JSON shape.'
 );
+assert(storageTestSource.includes('adaptive_modules'), 'storage check should guard adaptive generator JSON modules.');
+assert(storageTestSource.includes('atmosphere_mood'), 'storage check should guard atmosphere mood adaptive modules.');
 assert(jsonRepairTestSource.includes('loose JSON repair did not preserve zh.prompt'), 'JSON repair test should guard JavaScript-like model JSON repair.');
 assert(manualRealTestSource.includes('publicSettings'), 'real-extension test should avoid printing raw settings.');
 assert(manualRealTestSource.includes('redactSecrets'), 'real-extension test should redact storage evidence on failure.');
@@ -834,7 +865,8 @@ assert(realJsonAuditSource.includes('ZHIJUAN_JSON_FORBIDDEN_PROMPT'), 'real JSON
 assert(realJsonAuditSource.includes('forbiddenPromptAnchorsAbsent'), 'real JSON readiness audit should fail on wrong precise prompt anchors.');
 assert(realJsonAuditSource.includes('parsePromptAnalysis(analysis)'), 'real JSON readiness audit should re-parse existing audit files through current repair logic.');
 assert(installedAcceptanceSource.includes('chrome://extensions'), 'installed extension acceptance doc should tell the user where to refresh the extension.');
-assert(installedAcceptanceSource.includes('starts with a top-level `prompt` field'), 'installed extension acceptance doc should verify generator-facing JSON prompt output.');
+assert(installedAcceptanceSource.includes('task: "image_reconstruction"'), 'installed extension acceptance doc should verify structured generator-facing JSON prompt output.');
+assert(installedAcceptanceSource.includes('not a top-level `prompt` field'), 'installed extension acceptance doc should reject prompt-first generator JSON output.');
 assert(installedAcceptanceSource.includes('no Japanese output block'), 'installed extension acceptance doc should keep the no-hidden-Japanese gate.');
 assert(installedAcceptanceSource.includes('no duplicate `recreation_prompt` output'), 'installed extension acceptance doc should keep the duplicate prompt gate.');
 

@@ -120,17 +120,19 @@ assert(!/source image|reference image|recreate/i.test(handoffPrompt));
 
 const handoffJsonPromptText = stringifyGeneratorJsonPrompt(handoffAnalysis);
 const handoffJsonPrompt = JSON.parse(handoffJsonPromptText);
-assert.equal(Object.keys(handoffJsonPrompt)[0], 'prompt');
-assert.equal(handoffJsonPrompt.prompt, handoffPrompt);
-assert.equal(handoffJsonPrompt.negative_prompt, 'external input dependency, visual target dependency');
+assert.equal(Object.keys(handoffJsonPrompt)[0], 'task');
+assert.equal(handoffJsonPrompt.task, 'image_reconstruction');
+assert.equal(handoffJsonPrompt.prompt, undefined);
+assert.equal(handoffJsonPrompt.description, handoffPrompt);
 assert.equal(handoffJsonPrompt.subject, 'visual target poster with visual target texture');
+assert.equal(handoffJsonPrompt.constraints.negative_prompt, 'external input dependency, visual target dependency');
+assert.equal(handoffJsonPrompt.constraints.fidelity_controls, undefined);
+assert.deepEqual(handoffJsonPrompt.constraints.must_preserve, ['visual target geometry']);
+assert.equal(handoffJsonPrompt.fidelity_priorities, undefined);
+assert.equal(handoffJsonPrompt.reconstruction_priorities, undefined);
 assert(!handoffJsonPromptText.includes('"schema_version"'));
 assert(!handoffJsonPromptText.includes('reconstruction_v2'));
 assert(!/source image|reference image|reference upload/i.test(handoffJsonPromptText));
-assert.equal(handoffJsonPrompt.fidelity_priorities[0], 'priority 95 of 100 - visual target grain');
-assert.equal(handoffJsonPrompt.reconstruction_priorities[0].cue, 'visual target geometry');
-assert.equal(handoffJsonPrompt.reconstruction_priorities[0].tradeoff, 'visual target layout over polish');
-assert.equal(handoffJsonPrompt.reconstruction_priorities[0].risk_if_missing, 'external input dependency');
 
 const visibleTextGeneratorJsonAnalysis = {
   ...currentAnalysis,
@@ -152,8 +154,147 @@ const visibleTextGeneratorJsonAnalysis = {
   }
 };
 const visibleTextGeneratorJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(visibleTextGeneratorJsonAnalysis));
-assert.equal(visibleTextGeneratorJsonPrompt.text_elements[0].content, 'schema_version: reconstruction_v2');
-assert.equal(visibleTextGeneratorJsonPrompt.text_elements[0].location, 'top edge of the visual target');
+assert.equal(
+  visibleTextGeneratorJsonPrompt.description,
+  'Create a clean poster.'
+);
+assert.deepEqual(visibleTextGeneratorJsonPrompt.text_elements, [
+  {
+    text: 'schema_version: reconstruction_v2',
+    language: 'code',
+    role: 'visible label',
+    placement: 'top edge of the visual target',
+    typography: 'small monospace text',
+    legibility: 'clear',
+    priority: 95
+  }
+]);
+
+const adaptiveModulesAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for adaptive modules', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Vertical poster with visible Chinese title, glossy ceramic bowl, dark wood surface, warm steam haze, and quiet dark mood.',
+    generation_negative_prompt: 'missing Chinese title, translated title, plastic material, bright clean studio lighting',
+    lighting_atmosphere: 'warm steam haze with a quiet dark poster mood',
+    global_fingerprint: {
+      ...currentAnalysis.json_prompt.global_fingerprint,
+      density: 'dense but calm',
+      optical_finish: ['warm steam haze', 'soft dark mood']
+    },
+    observation_units: [
+      {
+        id: 'text',
+        kind: 'text_lock',
+        priority: 96,
+        prompt: 'Visible Chinese title stays in the upper-left hierarchy.',
+        evidence: 'Chinese title is visible',
+        location: 'upper left',
+        must_preserve: ['Chinese title'],
+        avoid_drift: ['translated title']
+      },
+      {
+        id: 'surface',
+        kind: 'material_surface',
+        priority: 90,
+        prompt: 'Glossy ceramic and dark wood texture remain source-defining.',
+        evidence: 'visible material surfaces',
+        location: 'foreground',
+        must_preserve: ['glossy ceramic', 'dark wood texture'],
+        avoid_drift: ['plastic material']
+      },
+      {
+        id: 'atmosphere',
+        kind: 'atmosphere_mood',
+        priority: 88,
+        prompt: 'Warm steam haze and quiet dark poster mood remain across the whole image.',
+        evidence: 'warm haze and dark mood unify the poster',
+        location: 'whole image',
+        must_preserve: ['warm steam haze', 'quiet dark poster mood'],
+        avoid_drift: ['bright clean studio lighting']
+      }
+    ]
+  }
+};
+const adaptiveModulesJsonPromptText = stringifyGeneratorJsonPrompt(adaptiveModulesAnalysis);
+const adaptiveModulesJsonPrompt = JSON.parse(adaptiveModulesJsonPromptText);
+assert.deepEqual(adaptiveModulesJsonPrompt.adaptive_modules, [
+  {
+    module: 'text_lock',
+    priority: 96,
+    instruction: 'Visible Chinese title stays in the upper-left hierarchy.',
+    evidence: 'Chinese title is visible',
+    placement: 'upper left',
+    must_preserve: ['Chinese title'],
+    avoid_drift: ['translated title']
+  },
+  {
+    module: 'material_surface',
+    priority: 90,
+    instruction: 'Glossy ceramic and dark wood texture remain source-defining.',
+    evidence: 'visible material surfaces',
+    placement: 'foreground',
+    must_preserve: ['glossy ceramic', 'dark wood texture'],
+    avoid_drift: ['plastic material']
+  },
+  {
+    module: 'atmosphere_mood',
+    priority: 88,
+    instruction: 'Warm steam haze and quiet dark poster mood remain across the whole image.',
+    evidence: 'warm haze and dark mood unify the poster',
+    placement: 'whole image',
+    must_preserve: ['warm steam haze', 'quiet dark poster mood'],
+    avoid_drift: ['bright clean studio lighting']
+  }
+]);
+assert.deepEqual(adaptiveModulesJsonPrompt.atmosphere, {
+  mood: 'warm steam haze with a quiet dark poster mood',
+  optical_finish: ['warm steam haze', 'soft dark mood'],
+  density: 'dense but calm'
+});
+assert.equal(adaptiveModulesJsonPrompt.observation_units, undefined);
+assert(!adaptiveModulesJsonPromptText.includes('"schema_version"'));
+assert(!adaptiveModulesJsonPromptText.includes('reconstruction_v2'));
+
+const generatorJsonAnalysisNoise = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for analysis-noise regression', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt:
+      'Portrait 3:4 flat graphic illustration, simplified low-detail face, clean color blocks, matte paper texture, sparse background, and restrained ornament density.',
+    generation_negative_prompt:
+      'realistic portraiture, ornate historical painting, wrong detail level, added decorative background',
+    aspect_ratio: '3:4',
+    subject: 'ornate court-lady portrait in detailed historical costume',
+    style_camera: 'realistic gongbi painting with elaborate historical brushwork',
+    materials: ['detailed silk brocade', 'glossy skin'],
+    fidelity_priorities: ['ornate historical costume priority 99 of 100'],
+    reconstruction_priorities: [
+      {
+        cue: 'ornate historical painting detail',
+        priority: 99,
+        tradeoff: 'historical style over flat source style',
+        compile_to_en_prompt: true,
+        risk_if_missing: 'flat graphic source remains flat'
+      }
+    ]
+  }
+};
+const generatorJsonAnalysisNoisePrompt = JSON.parse(stringifyGeneratorJsonPrompt(generatorJsonAnalysisNoise));
+assert.equal(generatorJsonAnalysisNoisePrompt.task, 'image_reconstruction');
+assert.equal(generatorJsonAnalysisNoisePrompt.prompt, undefined);
+assert.equal(generatorJsonAnalysisNoisePrompt.description, generatorJsonAnalysisNoise.json_prompt.generation_prompt);
+assert.equal(generatorJsonAnalysisNoisePrompt.composition.aspect_ratio, '3:4');
+assert.equal(generatorJsonAnalysisNoisePrompt.subject, undefined);
+assert.equal(generatorJsonAnalysisNoisePrompt.style, undefined);
+assert.equal(generatorJsonAnalysisNoisePrompt.materials_texture, undefined);
+assert.equal(generatorJsonAnalysisNoisePrompt.constraints.fidelity_controls, undefined);
+assert(!JSON.stringify(generatorJsonAnalysisNoisePrompt).includes('style_camera'));
+assert(!JSON.stringify(generatorJsonAnalysisNoisePrompt).includes('fidelity_priorities'));
+assert(!JSON.stringify(generatorJsonAnalysisNoisePrompt).includes('court-lady'));
+assert(!JSON.stringify(generatorJsonAnalysisNoisePrompt).includes('gongbi'));
 
 const noReferenceUploadRequestAnalysis = {
   ...currentAnalysis,
@@ -165,7 +306,8 @@ const noReferenceUploadRequestAnalysis = {
 };
 assert.equal(getGeneratorPrompt(noReferenceUploadRequestAnalysis), 'Create a clean poster with self-contained generation instructions.');
 const noReferenceUploadJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(noReferenceUploadRequestAnalysis));
-assert.equal(noReferenceUploadJsonPrompt.prompt, 'Create a clean poster with self-contained generation instructions.');
+assert.equal(noReferenceUploadJsonPrompt.prompt, undefined);
+assert.equal(noReferenceUploadJsonPrompt.description, 'Create a clean poster with self-contained generation instructions.');
 assert(!/reference image|upload request|a external/i.test(JSON.stringify(noReferenceUploadJsonPrompt)));
 
 const structuralGenerationPromptLabelAnalysis = {
@@ -358,8 +500,9 @@ const quotedJsonFieldFragmentAnalysis = {
 };
 assert.equal(getGeneratorPrompt(quotedJsonFieldFragmentAnalysis), 'Create a clean poster with visual target glow.');
 const quotedJsonFieldGeneratorJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(quotedJsonFieldFragmentAnalysis));
-assert.equal(Object.keys(quotedJsonFieldGeneratorJsonPrompt)[0], 'prompt');
-assert.equal(quotedJsonFieldGeneratorJsonPrompt.prompt, 'Create a clean poster with visual target glow.');
+assert.equal(Object.keys(quotedJsonFieldGeneratorJsonPrompt)[0], 'task');
+assert.equal(quotedJsonFieldGeneratorJsonPrompt.prompt, undefined);
+assert.equal(quotedJsonFieldGeneratorJsonPrompt.description, 'Create a clean poster with visual target glow.');
 assert(!JSON.stringify(quotedJsonFieldGeneratorJsonPrompt).includes('schema_version'));
 assert(!JSON.stringify(quotedJsonFieldGeneratorJsonPrompt).includes('reconstruction_v2'));
 

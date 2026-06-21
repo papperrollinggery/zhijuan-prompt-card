@@ -48,13 +48,15 @@ Zhijuan Prompt Card 会把可复制提示词和内部结构化数据分开。
 |---|---|
 | English | 外部图像生成器的主要复刻提示词 |
 | Chinese | 中文工作流下的查看、编辑和复用 |
-| JSON | 面向生成器的 JSON Prompt，首字段为 `prompt` |
+| JSON | 面向生成器的结构化复原 Prompt，包含动态模块、整图氛围、主体、构图、风格、色彩、可见文字、约束和辅助描述字段 |
 | Negative | 防漂移和质量约束 |
 | Tags | 简洁的风格、材质标签 |
 
 从 v0.3.3 开始，普通复制、历史复制和“打开生成器”都会使用 generator-safe prompt。`schema_version: "reconstruction_v2"` 这类内部结构元数据只保留在结构化导出中，不会再默认进入生成器提示词，除非它确实是原图里可见的文字。
 
 从 v0.3.4 开始，上传图片的真实尺寸会作为 source-frame 证据，因此竖版、横版和方图在自然语言提示词和面向生成器的 JSON 中都会保持原图方向和比例。
+
+面向生成器的 JSON 是结构化的，不再是 `prompt` 首字段包装。它使用 `task`、`adaptive_modules`、`subject`、`composition`、`style`、`atmosphere`、`color_palette`、`materials_texture`、`text_elements`、`constraints` 和 `description` 等生成器可读字段；内部 schema 字段不会进入复制内容，且与编译后的生成描述冲突的结构字段会在复制前被过滤。
 
 ## 安装
 
@@ -157,6 +159,8 @@ npm run build
 npm run check:storage
 npm run check:json-repair
 npm run check:prompt-goal
+npm run check:extension-pages
+npm run check:content-script
 ```
 
 打包 release zip：
