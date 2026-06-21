@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const reversePromptPath = join(root, 'src/shared/reversePrompt.ts');
 const typesPath = join(root, 'src/shared/types.ts');
 const panelPath = join(root, 'src/content/panel.tsx');
+const popupHistoryPath = join(root, 'src/popup/HistoryView.tsx');
 const historyDisplayPath = join(root, 'src/shared/historyDisplay.ts');
 const jsonRepairPath = join(root, 'src/shared/jsonRepair.ts');
 const imageDataPath = join(root, 'src/shared/imageData.ts');
@@ -19,6 +20,7 @@ const installedAcceptancePath = join(root, 'docs/installed-extension-acceptance.
 const reversePromptSource = readFileSync(reversePromptPath, 'utf8');
 const typesSource = readFileSync(typesPath, 'utf8');
 const panelSource = readFileSync(panelPath, 'utf8');
+const popupHistorySource = readFileSync(popupHistoryPath, 'utf8');
 const historyDisplaySource = readFileSync(historyDisplayPath, 'utf8');
 const jsonRepairSource = readFileSync(jsonRepairPath, 'utf8');
 const imageDataSource = readFileSync(imageDataPath, 'utf8');
@@ -712,7 +714,10 @@ assert(systemPrompt.length >= 5200, 'system prompt is unexpectedly short for the
 assert(systemPrompt.length <= 15500, 'system prompt is too long; keep the runtime prompt compact enough for API use.');
 assert(!panelSource.includes('analysis[tab].prompt}\\n\\n${analysis[tab].analysis'), 'language tab output must not concatenate prompt and analysis.');
 assert(panelSource.includes("if (tab === 'en') return getGeneratorPrompt(analysis);"), 'English tab should display/copy the generator-safe prompt text.');
+assert(panelSource.includes("if (tab === 'json') return stringifyGeneratorJsonPrompt(analysis);"), 'JSON tab should display/copy generator-facing JSON prompt, not internal structured JSON.');
 assert(panelSource.includes('props.onOpenGenerator(siteId, generatorPrompt)'), 'generator handoff must use the generator-safe prompt.');
+assert(popupHistorySource.includes('stringifyGeneratorJsonPrompt(entry.analysis)'), 'popup history JSON copy should use generator-facing JSON prompt.');
+assert(historyDisplaySource.includes("setFilledGeneratorJsonField(output, 'prompt', getGeneratorPrompt(analysis));"), 'generator JSON prompt should put the generator-safe prompt first.');
 assert(historyDisplaySource.includes('analysis?.json_prompt?.generation_prompt'), 'generator prompt helper should use json_prompt.generation_prompt.');
 assert(
   historyDisplaySource.indexOf('analysis?.json_prompt?.generation_prompt') < historyDisplaySource.indexOf('legacyAnalysis?.recreation_prompt'),
@@ -753,7 +758,7 @@ assert(realJsonAuditSource.includes('ZHIJUAN_JSON_FORBIDDEN_PROMPT'), 'real JSON
 assert(realJsonAuditSource.includes('forbiddenPromptAnchorsAbsent'), 'real JSON readiness audit should fail on wrong precise prompt anchors.');
 assert(realJsonAuditSource.includes('parsePromptAnalysis(analysis)'), 'real JSON readiness audit should re-parse existing audit files through current repair logic.');
 assert(installedAcceptanceSource.includes('chrome://extensions'), 'installed extension acceptance doc should tell the user where to refresh the extension.');
-assert(installedAcceptanceSource.includes('schema_version: "reconstruction_v2"'), 'installed extension acceptance doc should verify reconstruction_v2 output.');
+assert(installedAcceptanceSource.includes('starts with a top-level `prompt` field'), 'installed extension acceptance doc should verify generator-facing JSON prompt output.');
 assert(installedAcceptanceSource.includes('no Japanese output block'), 'installed extension acceptance doc should keep the no-hidden-Japanese gate.');
 assert(installedAcceptanceSource.includes('no duplicate `recreation_prompt` output'), 'installed extension acceptance doc should keep the duplicate prompt gate.');
 

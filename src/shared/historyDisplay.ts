@@ -100,6 +100,39 @@ export function stringifyJsonPrompt(jsonPrompt: PromptAnalysis['json_prompt'] | 
   return JSON.stringify(ordered, null, 2);
 }
 
+export function stringifyGeneratorJsonPrompt(analysis: PromptAnalysis | undefined): string {
+  const jsonPrompt = toRecord(analysis?.json_prompt);
+  const output: Record<string, unknown> = {};
+
+  setFilledGeneratorJsonField(output, 'prompt', getGeneratorPrompt(analysis));
+  setFilledGeneratorJsonField(output, 'negative_prompt', firstFilledText(jsonPrompt.generation_negative_prompt, analysis?.negative_prompt));
+  setFilledGeneratorJsonField(output, 'aspect_ratio', jsonPrompt.aspect_ratio);
+  setFilledGeneratorJsonField(output, 'prompt_core', analysis?.prompt_core);
+  setFilledGeneratorJsonField(output, 'style_tags', analysis?.en_style_tags);
+  setFilledGeneratorJsonField(output, 'subject', jsonPrompt.subject);
+  setFilledGeneratorJsonField(output, 'action_pose', jsonPrompt.action_pose);
+  setFilledGeneratorJsonField(output, 'details_appearance', jsonPrompt.details_appearance);
+  setFilledGeneratorJsonField(output, 'environment_background', jsonPrompt.environment_background);
+  setFilledGeneratorJsonField(output, 'lighting_atmosphere', jsonPrompt.lighting_atmosphere);
+  setFilledGeneratorJsonField(output, 'composition_framing', jsonPrompt.composition_framing);
+  setFilledGeneratorJsonField(output, 'style_camera', jsonPrompt.style_camera);
+  setFilledGeneratorJsonField(output, 'colors', jsonPrompt.colors);
+  setFilledGeneratorJsonField(output, 'materials', jsonPrompt.materials);
+  setFilledGeneratorJsonField(output, 'quality_modifiers', jsonPrompt.quality_modifiers);
+  setFilledGeneratorJsonField(output, 'spatial_dynamics', jsonPrompt.spatial_dynamics);
+  setFilledGeneratorJsonField(output, 'text_elements', Array.isArray(jsonPrompt.text_elements) ? jsonPrompt.text_elements.map((item) => orderKnownKeysIfRecord(item, textElementKeyOrder)) : undefined);
+  setFilledGeneratorJsonField(output, 'fidelity_priorities', jsonPrompt.fidelity_priorities);
+  setFilledGeneratorJsonField(
+    output,
+    'reconstruction_priorities',
+    Array.isArray(jsonPrompt.reconstruction_priorities)
+      ? jsonPrompt.reconstruction_priorities.map((item) => orderKnownKeysIfRecord(item, reconstructionPriorityKeyOrder))
+      : undefined
+  );
+
+  return JSON.stringify(output, null, 2);
+}
+
 export function stringifyPromptAnalysis(analysis: PromptAnalysis): string {
   const source = toRecord(analysis);
   const legacyRecreationPrompt = typeof source.recreation_prompt === 'string' ? source.recreation_prompt.trim() : '';
@@ -177,6 +210,48 @@ function orderKnownKeys(value: Record<string, unknown>, keyOrder: readonly strin
 
 function orderKnownKeysIfRecord(value: unknown, keyOrder: readonly string[]): unknown {
   return isRecord(value) ? orderKnownKeys(value, keyOrder) : value;
+}
+
+function setFilledGeneratorJsonField(target: Record<string, unknown>, key: string, value: unknown): void {
+  const normalized = normalizeGeneratorJsonValue(value);
+  if (isFilledGeneratorJsonValue(normalized)) target[key] = normalized;
+}
+
+function firstFilledText(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
+function normalizeGeneratorJsonValue(value: unknown, key = ''): unknown {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return shouldPreserveGeneratorJsonText(key) ? trimmed : sanitizeGeneratorPromptText(trimmed);
+  }
+  if (Array.isArray(value)) return value.map((item) => normalizeGeneratorJsonValue(item, key)).filter(isFilledGeneratorJsonValue);
+  if (isRecord(value)) {
+    const entries = Object.entries(value)
+      .map(([itemKey, item]) => [itemKey, normalizeGeneratorJsonValue(item, itemKey)] as const)
+      .filter(([, item]) => isFilledGeneratorJsonValue(item));
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+function shouldPreserveGeneratorJsonText(key: string): boolean {
+  return key === 'content';
+}
+
+function isFilledGeneratorJsonValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(isFilledGeneratorJsonValue);
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return true;
+  if (isRecord(value)) return Object.values(value).some(isFilledGeneratorJsonValue);
+  return false;
 }
 
 function firstSanitizedPrompt(...prompts: Array<string | undefined>): string {
@@ -476,6 +551,8 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
       .replace(/\breference screenshots\b/gi, 'target screenshots')
       .replace(/\breference visuals\b/gi, 'visual targets')
       .replace(/\breference photos\b/gi, 'target photos')
+      .replace(/\breference upload requests?\b/gi, 'upload request')
+      .replace(/\breference uploads?\b/gi, 'uploads')
       .replace(/\breference image\b/gi, 'visual target')
       .replace(/\breference screenshot\b/gi, 'target screenshot')
       .replace(/\breference visual\b/gi, 'visual target')
@@ -484,10 +561,17 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
       .replace(/\bsource screenshots\b/gi, 'target screenshots')
       .replace(/\bsource visuals\b/gi, 'visual targets')
       .replace(/\bsource photos\b/gi, 'target photos')
+      .replace(/\bsource upload requests?\b/gi, 'upload request')
+      .replace(/\bsource uploads?\b/gi, 'uploads')
       .replace(/\bsource image\b/gi, 'visual target')
       .replace(/\bsource screenshot\b/gi, 'target screenshot')
       .replace(/\bsource visual\b/gi, 'visual target')
-      .replace(/\bsource photo\b/gi, 'target photo');
+      .replace(/\bsource photo\b/gi, 'target photo')
+      .replace(/\b(?:visual targets?|target screenshots?|target visuals?|target photos?)\s+upload requests?\b/gi, 'external input dependency')
+      .replace(/\bupload requests?\b/gi, 'external input dependency')
+      .replace(/\bno request for (?:an?\s+)?external input dependency\b/gi, 'self-contained generation instructions')
+      .replace(/\bwithout (?:an?\s+)?external input dependency\b/gi, 'self-contained generation instructions')
+      .replace(/\ba external input dependency\b/gi, 'an external input dependency');
   });
 }
 

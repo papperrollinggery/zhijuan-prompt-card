@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
-import { canShowHistoryImage, getHistoryImageKey, getHistoryImageSrc, getHistoryPreviewText, getHistoryPrompt, getHistorySource, getHistoryStatusLabel, getVisualHistoryEntries, stringifyPromptAnalysis } from '../shared/historyDisplay';
+import { canShowHistoryImage, getHistoryImageKey, getHistoryImageSrc, getHistoryPreviewText, getHistoryPrompt, getHistorySource, getHistoryStatusLabel, getVisualHistoryEntries, stringifyGeneratorJsonPrompt } from '../shared/historyDisplay';
 import { clearHistory, deleteHistoryEntry, getHistory, updateHistoryEntry } from '../shared/storage';
 import type { HistoryEntry, InterfaceLanguage } from '../shared/types';
 
@@ -11,7 +11,7 @@ const historyCopy = {
     refresh: 'Refresh',
     clearAll: 'Clear history',
     copyPrompt: 'Copy prompt',
-    copyJson: 'Copy JSON data',
+    copyJson: 'Copy JSON prompt',
     copySource: 'Copy source',
     openSource: 'Open source',
     promptPreview: 'Prompt',
@@ -35,7 +35,7 @@ const historyCopy = {
     refresh: '刷新',
     clearAll: '清空历史',
     copyPrompt: '复制提示词',
-    copyJson: '复制结构 JSON',
+    copyJson: '复制 JSON 提示词',
     copySource: '复制来源',
     openSource: '打开来源',
     promptPreview: '提示词',
@@ -228,7 +228,7 @@ export function HistoryView(props: { entries: HistoryEntry[]; language: Interfac
                   >
                     {labels.copyPrompt}
                   </button>
-                  <button type="button" disabled={!entry.analysis} onClick={() => entry.analysis && void copy(stringifyPromptAnalysis(entry.analysis))}>
+                  <button type="button" disabled={!entry.analysis} onClick={() => entry.analysis && void copy(stringifyGeneratorJsonPrompt(entry.analysis))}>
                     {labels.copyJson}
                   </button>
                   <button type="button" disabled={!source} onClick={() => source && void copy(source)}>

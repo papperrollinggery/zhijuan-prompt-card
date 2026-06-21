@@ -428,6 +428,9 @@ async function run() {
     await page.waitForTimeout(300);
     const jsonClipboard = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
     if (!jsonClipboard.includes('Bilibili homepage capture test')) throw new Error('copy JSON did not write JSON prompt');
+    const jsonPrompt = JSON.parse(jsonClipboard);
+    if (Object.keys(jsonPrompt)[0] !== 'prompt') throw new Error('copy JSON did not put prompt first');
+    if (/schema_version|reconstruction_v2/.test(jsonClipboard)) throw new Error('copy JSON leaked internal schema metadata');
     evidence.checks.push('copy_json_ok');
 
     await clickShadow(page, { text: '英文', exact: true });

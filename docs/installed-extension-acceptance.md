@@ -25,14 +25,13 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 2. Open the Zhijuan floating panel.
 3. Choose the page image selection action.
 4. Select the target image and wait for success.
-5. Confirm the English tab shows one primary copyable recreation prompt and is the tab to use for Image2 or other image generators.
-6. Confirm the JSON tab is labeled as structured JSON, not prompt output, and contains `schema_version: "reconstruction_v2"`.
-7. Confirm JSON contains `generation_prompt`, `generation_negative_prompt`, and `spatial_dynamics`.
-8. Confirm normal prompt copy and Open in generator use `json_prompt.generation_prompt` text, not the full JSON object.
-9. Confirm pasted generator text does not include unquoted wrapper tokens such as `schema_version`, `reconstruction_v2`, `source image`, or `reference image`; quoted visible source text must stay exact.
-10. Confirm a model response that accidentally starts the generator field with `"schema_version": "reconstruction_v2",` or `"generation_prompt": ...` is cleaned before normal Copy and Open in generator.
-11. Confirm JSON contains dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities`.
-12. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
+5. Confirm the English tab shows one primary copyable recreation prompt for Image2 or other image generators.
+6. Confirm the JSON tab is also a generator-facing prompt and starts with a top-level `prompt` field.
+7. Confirm the JSON prompt's `prompt` value matches the same generator-safe text used by normal prompt Copy and Open in generator.
+8. Confirm the JSON prompt does not start with or include internal wrapper tokens such as `schema_version`, `reconstruction_v2`, `source image`, or `reference image`; quoted visible source text must stay exact.
+9. Confirm a model response that accidentally starts the generator field with `"schema_version": "reconstruction_v2",` or `"generation_prompt": ...` is cleaned before English Copy, JSON Copy, and Open in generator.
+10. Confirm the underlying model output still has meaningful `json_prompt.generation_prompt`, `json_prompt.generation_negative_prompt`, `spatial_dynamics`, dynamic `global_fingerprint`, `observation_units`, and `reconstruction_priorities` in the saved record.
+11. Confirm there is no Japanese output block and no duplicate `recreation_prompt` output.
 
 ## Local Image Upload
 
@@ -41,16 +40,16 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 3. Wait for success.
 4. Confirm the English prompt is specific enough to preserve subject, composition, text/layout, style, optical finish, and drift blockers that matter for that image.
 5. Confirm `negative_prompt` is image-specific and does not globally ban blur, haze, bloom, grain, or low resolution when those are visible source traits.
-6. Confirm the JSON output uses dynamic observation units rather than a fixed image-type template.
+6. Confirm the saved structured model output uses dynamic observation units rather than a fixed image-type template.
 7. If the source image has motion, floating, suspension, occlusion, or layered depth, confirm those relationships appear in `json_prompt.generation_prompt` and `json_prompt.spatial_dynamics`, not only inside array fields.
-8. Confirm full JSON copying remains available only through the explicit structure JSON controls.
+8. Confirm JSON Copy uses the generator-facing JSON prompt, not the internal structured record.
 
 ## Pass Criteria
 
 - Both UI paths complete without API, parse, or storage errors.
-- Normal prompt copy and Open in generator use `json_prompt.generation_prompt` as the main generator handoff, with `en.prompt` only as fallback.
+- Normal prompt copy, JSON prompt copy, and Open in generator use `json_prompt.generation_prompt` as the main generator handoff, with `en.prompt` only as fallback.
 - New output has no hidden Japanese field and no duplicate recreation-prompt field.
-- Explicit JSON data copy remains available without dropping load-bearing motion, spatial, text, or negative-prompt facts.
+- JSON prompt copy preserves load-bearing motion, spatial, text, and negative-prompt facts without exposing internal schema metadata first.
 - JSON v2 evidence is present and meaningful for the actual image.
 - The generated prompt does not force every image toward a sharp, rectangular, polished, or over-structured style.
 - No project-owned Playwright, temporary Chromium, test server, or stale extension test process remains running afterward.

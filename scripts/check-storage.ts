@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { DEFAULT_SETTINGS } from '../src/shared/defaults';
-import { getGeneratorPrompt, getHistoryPrompt, stringifyJsonPrompt, stringifyPromptAnalysis } from '../src/shared/historyDisplay';
+import { getGeneratorPrompt, getHistoryPrompt, stringifyGeneratorJsonPrompt, stringifyJsonPrompt, stringifyPromptAnalysis } from '../src/shared/historyDisplay';
 import { addHistoryEntry, buildHistoryTitle, clearHistory, compactHistoryStorage, createRunningHistoryEntry, getHistory, getSettings, saveSettings, updateHistoryEntry } from '../src/shared/storage';
 
 const settings = await getSettings();
@@ -97,7 +97,19 @@ const handoffAnalysis = {
   en: { prompt: 'Fallback English prompt', analysis: '' },
   json_prompt: {
     ...currentAnalysis.json_prompt,
-    generation_prompt: 'schema_version: reconstruction_v2. Recreate a source image with layered blue haze and visible Chinese UI text. Please recreate blue poster with reference image energy.'
+    generation_prompt: 'schema_version: reconstruction_v2. Recreate a source image with layered blue haze and visible Chinese UI text. Please recreate blue poster with reference image energy.',
+    generation_negative_prompt: 'reference image upload request, source image dependency',
+    subject: 'source image poster with reference image texture',
+    fidelity_priorities: ['priority 95 of 100 - source image grain'],
+    reconstruction_priorities: [
+      {
+        cue: 'source image geometry',
+        priority: 90,
+        tradeoff: 'reference image layout over polish',
+        compile_to_en_prompt: true,
+        risk_if_missing: 'reference upload request'
+      }
+    ]
   }
 };
 const handoffPrompt = getGeneratorPrompt(handoffAnalysis);
@@ -105,6 +117,56 @@ assert.equal(handoffPrompt, 'Create a visual target with layered blue haze and v
 assert(!handoffPrompt.includes('schema_version'));
 assert(!handoffPrompt.includes('reconstruction_v2'));
 assert(!/source image|reference image|recreate/i.test(handoffPrompt));
+
+const handoffJsonPromptText = stringifyGeneratorJsonPrompt(handoffAnalysis);
+const handoffJsonPrompt = JSON.parse(handoffJsonPromptText);
+assert.equal(Object.keys(handoffJsonPrompt)[0], 'prompt');
+assert.equal(handoffJsonPrompt.prompt, handoffPrompt);
+assert.equal(handoffJsonPrompt.negative_prompt, 'external input dependency, visual target dependency');
+assert.equal(handoffJsonPrompt.subject, 'visual target poster with visual target texture');
+assert(!handoffJsonPromptText.includes('"schema_version"'));
+assert(!handoffJsonPromptText.includes('reconstruction_v2'));
+assert(!/source image|reference image|reference upload/i.test(handoffJsonPromptText));
+assert.equal(handoffJsonPrompt.fidelity_priorities[0], 'priority 95 of 100 - visual target grain');
+assert.equal(handoffJsonPrompt.reconstruction_priorities[0].cue, 'visual target geometry');
+assert.equal(handoffJsonPrompt.reconstruction_priorities[0].tradeoff, 'visual target layout over polish');
+assert.equal(handoffJsonPrompt.reconstruction_priorities[0].risk_if_missing, 'external input dependency');
+
+const visibleTextGeneratorJsonAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible schema text', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster.',
+    text_elements: [
+      {
+        content: 'schema_version: reconstruction_v2',
+        language: 'code',
+        role: 'visible label',
+        location: 'top edge of the source image',
+        typography: 'small monospace text',
+        legibility: 'clear',
+        priority: 95
+      }
+    ]
+  }
+};
+const visibleTextGeneratorJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(visibleTextGeneratorJsonAnalysis));
+assert.equal(visibleTextGeneratorJsonPrompt.text_elements[0].content, 'schema_version: reconstruction_v2');
+assert.equal(visibleTextGeneratorJsonPrompt.text_elements[0].location, 'top edge of the visual target');
+
+const noReferenceUploadRequestAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for no-reference-upload wording', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Create a clean poster with no request for a reference image upload request.'
+  }
+};
+assert.equal(getGeneratorPrompt(noReferenceUploadRequestAnalysis), 'Create a clean poster with self-contained generation instructions.');
+const noReferenceUploadJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(noReferenceUploadRequestAnalysis));
+assert.equal(noReferenceUploadJsonPrompt.prompt, 'Create a clean poster with self-contained generation instructions.');
+assert(!/reference image|upload request|a external/i.test(JSON.stringify(noReferenceUploadJsonPrompt)));
 
 const structuralGenerationPromptLabelAnalysis = {
   ...currentAnalysis,
@@ -269,6 +331,11 @@ const quotedJsonFieldFragmentAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(quotedJsonFieldFragmentAnalysis), 'Create a clean poster with visual target glow.');
+const quotedJsonFieldGeneratorJsonPrompt = JSON.parse(stringifyGeneratorJsonPrompt(quotedJsonFieldFragmentAnalysis));
+assert.equal(Object.keys(quotedJsonFieldGeneratorJsonPrompt)[0], 'prompt');
+assert.equal(quotedJsonFieldGeneratorJsonPrompt.prompt, 'Create a clean poster with visual target glow.');
+assert(!JSON.stringify(quotedJsonFieldGeneratorJsonPrompt).includes('schema_version'));
+assert(!JSON.stringify(quotedJsonFieldGeneratorJsonPrompt).includes('reconstruction_v2'));
 
 const quotedGenerationPromptFieldAnalysis = {
   ...currentAnalysis,

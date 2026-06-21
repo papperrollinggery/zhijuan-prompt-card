@@ -1,7 +1,7 @@
 import { type CSSProperties, type ChangeEvent as ReactChangeEvent, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisPhase, GeneratorSite, HistoryEntry, ImageTarget, InterfaceLanguage, PanelTab, PromptAnalysis } from '../shared/types';
 import { GENERATOR_SITES } from '../shared/generators';
-import { canShowHistoryImage, getGeneratorPrompt, getHistoryImageKey, getHistoryImageSrc, getHistoryPreviewText, getHistoryPrompt, getHistoryStatusLabel, stringifyJsonPrompt } from '../shared/historyDisplay';
+import { canShowHistoryImage, getGeneratorPrompt, getHistoryImageKey, getHistoryImageSrc, getHistoryPreviewText, getHistoryPrompt, getHistoryStatusLabel, stringifyGeneratorJsonPrompt } from '../shared/historyDisplay';
 import { checkLatestRelease, createIdleUpdateInfo } from '../shared/updates';
 import type { UpdateInfo } from '../shared/updates';
 
@@ -91,9 +91,9 @@ const copy = {
     },
     failed: 'Analysis failed',
     output: 'Prompt output',
-    outputJson: 'Structured JSON',
+    outputJson: 'JSON prompt',
     copy: 'Copy',
-    copyJson: 'Copy JSON data',
+    copyJson: 'Copy JSON prompt',
     copyNegative: 'Copy Negative',
     regenerate: 'Regenerate',
     cancel: 'Stop',
@@ -125,7 +125,7 @@ const copy = {
     settings: 'Settings',
     language: 'Language',
     promptCopied: 'Prompt copied',
-    jsonCopied: 'JSON data copied',
+    jsonCopied: 'JSON prompt copied',
     negativeCopied: 'Negative copied',
     updateAvailable: 'New version available',
     updateCta: 'View update notes'
@@ -169,9 +169,9 @@ const copy = {
     },
     failed: '识别失败',
     output: '提示词输出',
-    outputJson: '结构 JSON',
+    outputJson: 'JSON 提示词',
     copy: '复制',
-    copyJson: '复制结构 JSON',
+    copyJson: '复制 JSON 提示词',
     copyNegative: '复制反向词',
     regenerate: '重新识别',
     cancel: '终止',
@@ -203,7 +203,7 @@ const copy = {
     settings: '设置',
     language: '语言',
     promptCopied: '已复制提示词',
-    jsonCopied: '已复制结构 JSON',
+    jsonCopied: '已复制 JSON 提示词',
     negativeCopied: '已复制反向词',
     updateAvailable: '发现新版本',
     updateCta: '查看更新说明'
@@ -1301,7 +1301,7 @@ function usePreferredTab(analysis: PromptAnalysis | undefined, language: UiLangu
 }
 
 function getTabText(analysis: PromptAnalysis, tab: PanelTab): string {
-  if (tab === 'json') return stringifyJsonPrompt(analysis.json_prompt);
+  if (tab === 'json') return stringifyGeneratorJsonPrompt(analysis);
   if (tab === 'negative') return analysis.negative_prompt;
   if (tab === 'en') return getGeneratorPrompt(analysis);
   return analysis[tab].prompt;
