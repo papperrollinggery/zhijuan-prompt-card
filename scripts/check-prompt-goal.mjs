@@ -10,6 +10,7 @@ const popupHistoryPath = join(root, 'src/popup/HistoryView.tsx');
 const historyDisplayPath = join(root, 'src/shared/historyDisplay.ts');
 const jsonRepairPath = join(root, 'src/shared/jsonRepair.ts');
 const imageDataPath = join(root, 'src/shared/imageData.ts');
+const apiClientPath = join(root, 'src/shared/apiClient.ts');
 const packageJsonPath = join(root, 'package.json');
 const jsonRepairTestPath = join(root, 'scripts/check-json-repair.ts');
 const manualRealTestPath = join(root, 'scripts/manual-real-extension-test.mjs');
@@ -24,6 +25,7 @@ const popupHistorySource = readFileSync(popupHistoryPath, 'utf8');
 const historyDisplaySource = readFileSync(historyDisplayPath, 'utf8');
 const jsonRepairSource = readFileSync(jsonRepairPath, 'utf8');
 const imageDataSource = readFileSync(imageDataPath, 'utf8');
+const apiClientSource = readFileSync(apiClientPath, 'utf8');
 const packageJsonSource = readFileSync(packageJsonPath, 'utf8');
 const jsonRepairTestSource = readFileSync(jsonRepairTestPath, 'utf8');
 const manualRealTestSource = readFileSync(manualRealTestPath, 'utf8');
@@ -78,6 +80,12 @@ const contractChecks = [
   ['observed facts are still required', 'Observed facts'],
   ['output discipline is retained', 'Output discipline'],
   ['quality is conditional', 'Quality only when source supports it'],
+  ['source frame orientation is a first-class lock', 'Source frame lock'],
+  ['source frame metadata can override genre defaults', 'uploaded dimensions, orientation, aspect, and crop outrank genre defaults'],
+  ['portrait sports posters cannot become horizontal banners', 'Portrait posters stay portrait'],
+  ['generation prompt must lead with source frame for aspect-sensitive sources', 'the first clause of generation_prompt must state the source frame orientation and aspect/crop'],
+  ['negative prompt blocks orientation drift', 'wrong orientation/aspect ratio'],
+  ['portrait sources block widescreen drift', 'block horizontal, landscape, and widescreen drift'],
   ['visual fingerprint vocabulary covers soft focus', 'soft focus'],
   ['visual fingerprint vocabulary covers foreground blur', 'foreground blur'],
   ['visual fingerprint vocabulary covers volumetric light', 'volumetric or Tyndall light'],
@@ -103,7 +111,7 @@ const contractChecks = [
   ['JSON generation prompt compiles evidence', 'compiling all source-defining observation_units, text_elements, reconstruction_priorities, global_fingerprint, and spatial_dynamics'],
   ['JSON generation prompt is not weaker than English', 'must not be weaker than en.prompt'],
   ['JSON negative prompt mirrors top-level negative', 'generation_negative_prompt must mirror negative_prompt'],
-  ['JSON negative prompt compiles high-priority drift blockers', 'include high-priority avoid_drift, risk_if_missing, missing text, motion, material, boundary blockers'],
+  ['JSON negative prompt compiles high-priority drift blockers', 'include high-priority avoid_drift, risk_if_missing, missing text, wrong orientation/aspect, motion, material, boundary blockers'],
   ['JSON dynamic relationships are not array-only', 'Do not leave motion, floating/suspended objects, contact/support, z-depth, text placement, material/surface behavior, optical finish, or occlusion only in arrays'],
   ['fidelity priorities are plain-language controls', 'fidelity_priorities are plain-language reconstruction priorities'],
   ['fidelity priorities use 0-100 wording', 'priority N of 100'],
@@ -148,6 +156,40 @@ const forbiddenSystemPatterns = [
 ];
 
 const simulatedCases = [
+  {
+    id: 'vertical_sports_livestream_poster_orientation_lock',
+    recreation:
+      'Portrait 3:4 Chinese football livestream promo poster with a narrow vertical crop, red Tunisia side on the left and blue Japan side on the right, gritty black scratched background, top Xiaohongshu live header, four layered football-player cutouts, giant red-tinted portrait behind the left foreground player, giant blue-tinted East Asian-presenting portrait behind the right foreground player, lower-third black angular matchup bar reading “突尼斯” and “日本” with a gold slanted “Vs”, and the bottom headline “突尼斯换帅求存日本全力求胜”. Keep the source frame vertical and compact, with stacked top banner, portrait faces, foreground players, matchup bar, and bottom headline reading downward inside the same tall poster crop. Preserve the grunge splatter texture, compression, red-blue rivalry split, exact Chinese text hierarchy, cropped lower bodies, cutout halos, dense dark areas, and social-media screenshot finish.',
+    core:
+      'Portrait 3:4 Chinese football livestream poster, Tunisia versus Japan, red-left blue-right gritty collage, four player cutouts, Xiaohongshu live header, matchup bar, bottom headline.',
+    negative:
+      'horizontal poster, landscape crop, widescreen layout, wrong aspect ratio, wrong orientation, stretched banner, missing Chinese text, altered visible text, moved headline, missing lower matchup bar, lost red-left blue-right split, flattened depth layers, over-clean sports graphic, green stadium palette',
+    requiredEarlyAnchors: [
+      'Portrait 3:4',
+      'narrow vertical crop'
+    ],
+    requiredAnchors: [
+      'top Xiaohongshu live header',
+      'four layered football-player cutouts',
+      'lower-third black angular matchup bar',
+      'bottom headline',
+      'source frame vertical and compact',
+      'same tall poster crop'
+    ],
+    forbiddenAnchors: [
+      'horizontal sports livestream',
+      '15:8',
+      'widescreen crop',
+      'wide livestream cover'
+    ],
+    requiredNegativeAnchors: [
+      'horizontal poster',
+      'landscape crop',
+      'widescreen layout',
+      'wrong aspect ratio',
+      'wrong orientation'
+    ]
+  },
   {
     id: 'purple_soft_focus_anime',
     recreation:
@@ -689,12 +731,26 @@ assert(jsonRepairSource.includes('appendCueDriftBlockers'), 'parsePromptAnalysis
 assert(jsonRepairSource.includes('wrong material or surface finish'), 'parsePromptAnalysis should infer material drift blockers for JSON negative prompts.');
 assert(jsonRepairSource.includes('straightened boundaries'), 'parsePromptAnalysis should infer boundary drift blockers for JSON negative prompts.');
 assert(jsonRepairSource.includes('buildSpatialDynamicsFallback'), 'parsePromptAnalysis should build json_prompt.spatial_dynamics fallback from visible relationship fields.');
+assert(jsonRepairSource.includes('SourceFrameEvidence'), 'parsePromptAnalysis should accept real uploaded source-frame evidence.');
+assert(jsonRepairSource.includes('applySourceFrameEvidence'), 'parsePromptAnalysis should override model frame claims with source-frame evidence.');
+assert(jsonRepairSource.includes('sanitizeSourceFrameClaims'), 'parsePromptAnalysis should sanitize conflicting orientation/aspect claims before generator handoff.');
+assert(jsonRepairSource.includes('sanitizeSourceFrameNegativePrompt'), 'parsePromptAnalysis should remove negative-prompt blockers that fight the real source frame.');
+assert(jsonRepairSource.includes('buildSourceFrameLock'), 'parsePromptAnalysis should compile source-frame orientation/aspect locks into json_prompt.generation_prompt.');
+assert(jsonRepairSource.includes('wrong aspect ratio'), 'parsePromptAnalysis should add aspect-ratio blockers to json_prompt.generation_negative_prompt.');
 assert(jsonRepairSource.includes('normalizeObservationUnits'), 'parsePromptAnalysis should normalize json_prompt.observation_units.');
 assert(jsonRepairSource.includes('normalizeReconstructionPriorities'), 'parsePromptAnalysis should normalize json_prompt.reconstruction_priorities.');
 assert(jsonRepairSource.includes('repairJsonText'), 'parsePromptAnalysis should conservatively repair model JSON before failing.');
 assert(jsonRepairSource.includes('quoteUnquotedObjectKeys'), 'parsePromptAnalysis should repair unquoted JSON object keys.');
 assert(jsonRepairSource.includes('stripTrailingCommas'), 'parsePromptAnalysis should repair trailing JSON commas.');
 assert(jsonRepairSource.includes('normalizeSingleQuotedStrings'), 'parsePromptAnalysis should repair single-quoted JSON keys and values.');
+assert(apiClientSource.includes('buildSourceFrameEvidence'), 'API client should derive structured source-frame evidence from uploaded image dimensions.');
+assert(apiClientSource.includes('formatSourceImageFrameMetadata'), 'API client should format source image frame metadata.');
+assert(apiClientSource.includes('hard source-frame evidence'), 'API request should send source-frame metadata to the vision model.');
+assert(
+  apiClientSource.includes('parsePromptAnalysis(extractAssistantText(result.payload), sourceFrameEvidence)'),
+  'API client should pass source-frame evidence into response repair.'
+);
+assert(imageDataSource.includes('getDataUrlImageDimensions'), 'image data utilities should expose uploaded image dimensions for prompt metadata.');
 assert(panelSource.includes("'generation_prompt'"), 'panel completeness should require json_prompt.generation_prompt.');
 assert(panelSource.includes("'generation_negative_prompt'"), 'panel completeness should require json_prompt.generation_negative_prompt.');
 assert(panelSource.includes("'spatial_dynamics'"), 'panel completeness should require json_prompt.spatial_dynamics.');
@@ -711,7 +767,7 @@ assert(!systemPrompt.includes('"ja"'), 'system prompt should not request hidden 
 assert(!systemPrompt.includes('"ja_style_tags"'), 'system prompt should not request hidden Japanese style tags.');
 assert(!systemPrompt.includes('"recreation_prompt"'), 'system prompt should not request a duplicate recreation_prompt field.');
 assert(systemPrompt.length >= 5200, 'system prompt is unexpectedly short for the fusion reconstruction contract.');
-assert(systemPrompt.length <= 15500, 'system prompt is too long; keep the runtime prompt compact enough for API use.');
+assert(systemPrompt.length <= 16500, 'system prompt is too long; keep the runtime prompt compact enough for API use.');
 assert(!panelSource.includes('analysis[tab].prompt}\\n\\n${analysis[tab].analysis'), 'language tab output must not concatenate prompt and analysis.');
 assert(panelSource.includes("if (tab === 'en') return getGeneratorPrompt(analysis);"), 'English tab should display/copy the generator-safe prompt text.');
 assert(panelSource.includes("if (tab === 'json') return stringifyGeneratorJsonPrompt(analysis);"), 'JSON tab should display/copy generator-facing JSON prompt, not internal structured JSON.');
@@ -737,6 +793,26 @@ assert(packageJsonSource.includes('"test:real-structure": "tsx scripts/real-imag
 assert(jsonRepairTestSource.includes('steam-only evidence should not create splash blocker'), 'JSON repair test should guard steam-only overconstraint.');
 assert(jsonRepairTestSource.includes('generation_prompt did not compile high-priority observation evidence'), 'JSON repair test should guard weak generation_prompt repair.');
 assert(jsonRepairTestSource.includes('wrong material or surface finish'), 'JSON repair test should guard material blocker compilation.');
+assert(
+  jsonRepairTestSource.includes('source image aspect ratio evidence did not override model output'),
+  'JSON repair test should guard source-frame override when a model returns the wrong aspect ratio.'
+);
+assert(
+  jsonRepairTestSource.includes('generation_prompt still exposes the wrong model aspect ratio'),
+  'JSON repair test should guard generator prompt sanitization for wrong model aspect ratio.'
+);
+assert(
+  jsonRepairTestSource.includes('negative_prompt still blocks the real portrait source frame'),
+  'JSON repair test should guard negative-prompt source-frame contradictions.'
+);
+assert(
+  jsonRepairTestSource.includes('stringifyGeneratorJsonPrompt'),
+  'JSON repair test should guard the actual generator-facing JSON export path.'
+);
+assert(
+  jsonRepairTestSource.includes('generator JSON ${field} still exposes wrong aspect ratio'),
+  'JSON repair test should guard exported JSON fields beyond generation_prompt.'
+);
 assert(jsonRepairTestSource.includes('loose JSON repair did not preserve zh.prompt'), 'JSON repair test should guard JavaScript-like model JSON repair.');
 assert(manualRealTestSource.includes('publicSettings'), 'real-extension test should avoid printing raw settings.');
 assert(manualRealTestSource.includes('redactSecrets'), 'real-extension test should redact storage evidence on failure.');

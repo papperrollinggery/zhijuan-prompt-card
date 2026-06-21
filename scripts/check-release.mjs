@@ -83,6 +83,7 @@ function checkReadmeImages() {
   const readme = readFileSync(join(root, 'README.md'), 'utf8');
   const imageRefs = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((match) => match[1]);
   for (const ref of imageRefs) {
+    if (/^https?:\/\//i.test(ref)) continue;
     assert(existsSync(join(root, ref)), `README image missing: ${ref}`);
   }
 }

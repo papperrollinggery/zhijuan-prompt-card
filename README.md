@@ -54,6 +54,8 @@ Zhijuan Prompt Card separates copy-ready prompt text from internal structured da
 
 Since v0.3.3, normal copy, history copy, and Open in generator use a generator-safe prompt. Internal schema metadata such as `schema_version: "reconstruction_v2"` stays in structured exports and no longer becomes default generator text unless it is genuinely visible in the source image.
 
+Since v0.3.4, uploaded image dimensions are used as source-frame evidence, so portrait, landscape, and square inputs keep their orientation and aspect ratio in both natural-language prompts and generator-facing JSON.
+
 ## Install
 
 ### From GitHub Release
@@ -171,12 +173,12 @@ npm run release:check
 
 ## Project Status
 
-- Latest release: [v0.3.3](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.3)
+- Latest release: [v0.3.4](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.4)
 - Distribution: GitHub release zip and source build
 - Browser store listings: not published yet
 - License: [Apache-2.0](LICENSE)
 
-Release tags are machine-simple, for example `v0.3.3`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
+Release tags are machine-simple, for example `v0.3.4`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
 
 ## Contributing
 

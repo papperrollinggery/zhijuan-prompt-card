@@ -1,5 +1,10 @@
 const ANALYSIS_MAX_IMAGE_SIDE = 3072;
 
+export interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
 export async function urlToDataUrl(url: string, signal?: AbortSignal): Promise<string> {
   throwIfAborted(signal);
   if (url.startsWith('data:')) return url;
@@ -72,6 +77,20 @@ export async function createThumbnailDataUrl(input: string, maxSide = 220, quali
   const height = Math.max(1, Math.round(bitmap.height * scale));
   try {
     return await drawBitmapToDataUrl(bitmap, width, height, 'image/webp', quality);
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+export async function getDataUrlImageDimensions(input: string, signal?: AbortSignal): Promise<ImageDimensions | undefined> {
+  throwIfAborted(signal);
+  if (typeof createImageBitmap === 'undefined') return undefined;
+
+  const blob = await dataUrlToBlob(input);
+  throwIfAborted(signal);
+  const bitmap = await createImageBitmap(blob);
+  try {
+    return { width: bitmap.width, height: bitmap.height };
   } finally {
     bitmap.close?.();
   }

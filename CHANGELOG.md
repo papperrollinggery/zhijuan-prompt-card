@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.4
+
+**English**
+
+- Fixes portrait-source reconstruction prompts being able to drift into horizontal or widescreen generator instructions.
+- Uses the uploaded image dimensions as source-frame evidence, then preserves that orientation, aspect ratio, and crop through natural-language prompt copy, JSON prompt copy, and Open in generator.
+- Corrects contradictory model-returned frame claims before generator handoff, including wrong aspect ratios in JSON fields and nested structured prompt details.
+- Keeps correct orientation blockers in negative prompts, so portrait images explicitly block landscape, horizontal, and widescreen drift instead of asking generators to avoid the real source frame.
+- Adds regressions for portrait sports livestream posters where a model incorrectly returns wide-aspect frame wording.
+
+**中文**
+
+- 修复竖版原图的复刻提示词可能漂移成横版或宽屏生成指令的问题。
+- 使用上传图片的真实尺寸作为 source-frame 证据，并在自然语言复制、JSON Prompt 复制和“打开生成器”链路中保持原图方向、比例和裁切。
+- 在交给生成器前修正模型返回的矛盾画幅描述，包括 JSON 字段和嵌套结构化提示细节里的错误比例。
+- 反向词保留正确的方向漂移 blocker：竖图会阻止横版、横向和宽屏漂移，不再误把真实竖版画幅当成需要避免的内容。
+- 增加竖版足球直播海报回归，覆盖模型误返回宽屏画幅描述的情况。
+
 ## 0.3.3
 
 **English**

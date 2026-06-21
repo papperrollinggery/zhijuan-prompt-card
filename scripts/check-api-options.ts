@@ -1,5 +1,11 @@
 import { strict as assert } from 'node:assert';
-import { applyUnsupportedParameterFallback, buildAnalysisRequestOptions } from '../src/shared/apiClient';
+import {
+  applyUnsupportedParameterFallback,
+  buildAnalysisRequestBody,
+  buildAnalysisRequestOptions,
+  buildSourceFrameEvidence,
+  formatSourceImageFrameMetadata
+} from '../src/shared/apiClient';
 
 function hasOwn(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -87,5 +93,26 @@ assert.deepEqual(reasoningFallbackOptions, {
   model: 'o4-mini',
   max_completion_tokens: 12288
 });
+
+const portraitFrame = buildSourceFrameEvidence({ width: 390, height: 520 });
+assert.deepEqual(portraitFrame, { width: 390, height: 520, orientation: 'portrait', aspectRatio: '3:4' });
+const portraitFrameMetadata = formatSourceImageFrameMetadata(portraitFrame);
+assert.match(portraitFrameMetadata, /390 px wide x 520 px tall/);
+assert.match(portraitFrameMetadata, /Observed orientation: portrait/);
+assert.match(portraitFrameMetadata, /approximately 3:4/);
+assert.match(portraitFrameMetadata, /hard source-frame evidence/);
+assert.match(portraitFrameMetadata, /Do not call the image horizontal/);
+
+const analysisRequestBody = JSON.parse(
+  buildAnalysisRequestBody(buildAnalysisRequestOptions('gpt-4o'), 'Analyze this image.', 'image/png', 'AAA=', portraitFrameMetadata)
+);
+assert.match(analysisRequestBody.messages[0].content[0].text, /Analyze this image\./);
+assert.match(analysisRequestBody.messages[0].content[0].text, /Source image frame metadata:/);
+assert.match(analysisRequestBody.messages[0].content[0].text, /Observed orientation: portrait/);
+assert.equal(analysisRequestBody.messages[0].content[1].image_url.url, 'data:image/png;base64,AAA=');
+
+const landscapeFrameMetadata = formatSourceImageFrameMetadata(buildSourceFrameEvidence({ width: 1717, height: 916 }));
+assert.match(landscapeFrameMetadata, /Observed orientation: landscape/);
+assert.match(landscapeFrameMetadata, /approximately 1.87:1/);
 
 console.log('api option checks passed');

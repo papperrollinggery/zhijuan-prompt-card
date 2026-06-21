@@ -54,6 +54,8 @@ Zhijuan Prompt Card 会把可复制提示词和内部结构化数据分开。
 
 从 v0.3.3 开始，普通复制、历史复制和“打开生成器”都会使用 generator-safe prompt。`schema_version: "reconstruction_v2"` 这类内部结构元数据只保留在结构化导出中，不会再默认进入生成器提示词，除非它确实是原图里可见的文字。
 
+从 v0.3.4 开始，上传图片的真实尺寸会作为 source-frame 证据，因此竖版、横版和方图在自然语言提示词和面向生成器的 JSON 中都会保持原图方向和比例。
+
 ## 安装
 
 ### 从 GitHub Release 安装
@@ -171,12 +173,12 @@ npm run release:check
 
 ## 项目状态
 
-- 最新版本：[v0.3.3](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.3)
+- 最新版本：[v0.3.4](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.4)
 - 分发方式：GitHub release zip 和源码构建
 - 浏览器商店：暂未发布
 - License：[Apache-2.0](LICENSE)
 
-Release tag 保持机器友好格式，例如 `v0.3.3`。详细用户可见变化放在 [CHANGELOG.md](CHANGELOG.md) 和 GitHub release notes。
+Release tag 保持机器友好格式，例如 `v0.3.4`。详细用户可见变化放在 [CHANGELOG.md](CHANGELOG.md) 和 GitHub release notes。
 
 ## 贡献
 
