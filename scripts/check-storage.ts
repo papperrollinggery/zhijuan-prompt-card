@@ -7,11 +7,18 @@ const settings = await getSettings();
 assert.equal(settings.baseUrl, DEFAULT_SETTINGS.baseUrl);
 assert.equal(settings.apiKey, DEFAULT_SETTINGS.apiKey);
 assert.equal(settings.model, DEFAULT_SETTINGS.model);
+assert.equal(settings.apiTimeoutSeconds, DEFAULT_SETTINGS.apiTimeoutSeconds);
 assert.equal(settings.interfaceLanguage, DEFAULT_SETTINGS.interfaceLanguage);
 
 const normalizedLegacySettings = await saveSettings({ interfaceLanguage: 'ja' as never });
 assert.equal(normalizedLegacySettings.interfaceLanguage, 'en');
-await saveSettings({ interfaceLanguage: DEFAULT_SETTINGS.interfaceLanguage });
+const shortTimeoutSettings = await saveSettings({ apiTimeoutSeconds: 10 });
+assert.equal(shortTimeoutSettings.apiTimeoutSeconds, 60);
+const longTimeoutSettings = await saveSettings({ apiTimeoutSeconds: 9_999 });
+assert.equal(longTimeoutSettings.apiTimeoutSeconds, 1_800);
+const invalidTimeoutSettings = await saveSettings({ apiTimeoutSeconds: 'invalid' as never });
+assert.equal(invalidTimeoutSettings.apiTimeoutSeconds, DEFAULT_SETTINGS.apiTimeoutSeconds);
+await saveSettings({ interfaceLanguage: DEFAULT_SETTINGS.interfaceLanguage, apiTimeoutSeconds: DEFAULT_SETTINGS.apiTimeoutSeconds });
 
 const legacyAnalysis = {
   zh: { prompt: '新版中文短提示', analysis: '' },

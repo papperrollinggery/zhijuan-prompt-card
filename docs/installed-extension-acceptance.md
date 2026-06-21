@@ -5,7 +5,7 @@ This is the final user-installed extension gate before merge, push, tag, or rele
 
 ## Scope
 
-- Version under test: `0.3.4`.
+- Version under test: `0.3.5`.
 - Extension source: local unpacked `dist/` rebuilt from this branch.
 - Model path: the user's configured compatible vision endpoint.
 - Required UI paths: one page image selection and one local image upload.

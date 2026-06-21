@@ -322,11 +322,22 @@ async function copyText(text: string, label: string): Promise<void> {
 }
 
 async function regenerate(): Promise<void> {
-  if (!lastTarget) return;
+  const target = panelState.target || lastTarget;
+  if (!canRetryTarget(target)) {
+    showNotice(interfaceLanguage === 'zh' ? '无法重试：原始图片数据已不可用。' : 'Cannot retry: source image data is no longer available.');
+    return;
+  }
+  lastTarget = target;
   const workToken = beginWork();
-  startAnalysisPhase('preparing_image', lastTarget);
-  const entry = await sendRuntimeMessage<HistoryEntry>({ type: 'RUN_ANALYSIS', payload: { target: lastTarget } });
-  if (isCurrentWork(workToken)) applyCompletedEntry(entry, lastTarget);
+  startAnalysisPhase('preparing_image', target);
+  try {
+    const entry = await sendRuntimeMessage<HistoryEntry>({ type: 'RUN_ANALYSIS', payload: { target } });
+    if (isCurrentWork(workToken)) applyCompletedEntry(entry, target);
+  } catch (error) {
+    if (isCurrentWork(workToken) && !panelState.entry?.analysis) {
+      setPanelState({ open: true, loading: false, error: errorToMessage(error), target, picking: undefined, phase: undefined, startedAt: undefined });
+    }
+  }
 }
 
 function beginWork(): number {
@@ -464,6 +475,10 @@ function historyEntryToTarget(entry: HistoryEntry): ImageTarget | undefined {
   if (!source) return undefined;
   if (entry.imageUrl) return { kind: 'image', srcUrl: entry.imageUrl, pageUrl: entry.pageUrl, title: entry.title };
   return { kind: entry.pageUrl?.startsWith('local-file:') ? 'local' : 'page', pageUrl: entry.pageUrl, title: entry.title };
+}
+
+function canRetryTarget(target: ImageTarget | undefined): target is ImageTarget {
+  return Boolean(target?.dataUrl || target?.srcUrl);
 }
 
 async function toggleFavorite(id: string, favorite: boolean): Promise<void> {

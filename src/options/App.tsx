@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_SETTINGS, GENERATOR_SITE_IDS } from '../shared/defaults';
+import { DEFAULT_SETTINGS, GENERATOR_SITE_IDS, MAX_API_TIMEOUT_SECONDS, MIN_API_TIMEOUT_SECONDS } from '../shared/defaults';
 import { GENERATOR_SITES } from '../shared/generators';
 import { getSettings, saveSettings } from '../shared/storage';
 import type { AppSettings, InterfaceLanguage, RuntimeResponse } from '../shared/types';
@@ -36,6 +36,8 @@ const optionsCopy = {
     updateInstallHint: 'Unpacked installs cannot replace themselves silently. Read the bilingual release notes, download the latest release, unzip it, then reload the extension folder.',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
+    apiTimeout: 'API timeout seconds',
+    apiTimeoutHint: 'Long reasoning models may need 600s or more.',
     model: 'Model',
     language: 'Interface language',
     defaultGenerator: 'Default generator',
@@ -77,6 +79,8 @@ const optionsCopy = {
     updateInstallHint: '本地加载的 unpacked 插件不能在插件内静默替换。阅读中英双语更新说明，下载最新 release、解压后，在扩展页重新加载该文件夹。',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
+    apiTimeout: 'API 超时秒数',
+    apiTimeoutHint: '深度思考模型建议 600 秒或更长。',
     model: 'Model',
     language: '界面语言',
     defaultGenerator: '默认生成器',
@@ -221,6 +225,18 @@ export function OptionsApp() {
                 value={settings.apiKey}
                 onChange={(event) => setSettings({ ...settings, apiKey: event.target.value })}
               />
+            </label>
+            <label>
+              {labels.apiTimeout}
+              <input
+                type="number"
+                min={MIN_API_TIMEOUT_SECONDS}
+                max={MAX_API_TIMEOUT_SECONDS}
+                step={30}
+                value={settings.apiTimeoutSeconds}
+                onChange={(event) => setSettings({ ...settings, apiTimeoutSeconds: Number(event.target.value) })}
+              />
+              <small>{labels.apiTimeoutHint}</small>
             </label>
           </div>
         </div>

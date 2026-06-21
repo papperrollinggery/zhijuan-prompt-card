@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.5
+
+**English**
+
+- Raises the default API request timeout from 180 seconds to 600 seconds for slower reasoning-model image analysis.
+- Adds an API timeout setting in the options page, clamped between 60 and 1800 seconds.
+- Adds a retry button on failed analysis results when the original source image or image URL is still available.
+
+**中文**
+
+- 将默认 API 请求超时时间从 180 秒提高到 600 秒，适配较慢的深度思考模型识图。
+- 在设置页新增 API 超时秒数，限制范围为 60 到 1800 秒。
+- 识别失败且原始图片或图片 URL 仍可用时，失败面板新增“重新识别”按钮。
+
 ## 0.3.4
 
 **English**

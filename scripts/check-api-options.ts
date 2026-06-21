@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import {
   applyUnsupportedParameterFallback,
+  buildApiTimeoutMs,
   buildAnalysisRequestBody,
   buildAnalysisRequestOptions,
   buildSourceFrameEvidence,
@@ -17,6 +18,11 @@ assert.deepEqual(buildAnalysisRequestOptions('gpt-4o'), {
   max_tokens: 12288,
   image_detail: 'high'
 });
+
+assert.equal(buildApiTimeoutMs(undefined), 600_000);
+assert.equal(buildApiTimeoutMs(10), 60_000);
+assert.equal(buildApiTimeoutMs(900), 900_000);
+assert.equal(buildApiTimeoutMs(9_999), 1_800_000);
 
 const gpt5Options = buildAnalysisRequestOptions('gpt-5.5');
 assert.deepEqual(gpt5Options, {

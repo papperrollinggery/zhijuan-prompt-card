@@ -9,6 +9,7 @@ export interface AppSettings {
   baseUrl: string;
   apiKey: string;
   model: string;
+  apiTimeoutSeconds: number;
   interfaceLanguage: InterfaceLanguage;
   defaultGeneratorSite: GeneratorSite;
   persistentFloatingButton: boolean;

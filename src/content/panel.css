@@ -1839,6 +1839,19 @@
   line-height: 1.5;
 }
 
+.zpc-error__retry {
+  margin-top: 12px;
+  min-height: 34px;
+  border-color: var(--zpc-line-hot);
+  background: rgba(130, 184, 155, 0.2);
+  color: var(--zpc-text);
+}
+
+.zpc-error__retry:hover {
+  border-color: rgba(177, 225, 194, 0.58);
+  background: rgba(130, 184, 155, 0.28);
+}
+
 .zpc-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

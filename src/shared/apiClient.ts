@@ -1,9 +1,8 @@
 import { dataUrlToMimeAndBase64, getDataUrlImageDimensions, type ImageDimensions } from './imageData';
 import { parsePromptAnalysis, type SourceFrameEvidence } from './jsonRepair';
 import type { AppSettings, PromptAnalysis } from './types';
+import { DEFAULT_API_TIMEOUT_SECONDS, MAX_API_TIMEOUT_SECONDS, MIN_API_TIMEOUT_SECONDS } from './defaults';
 
-const API_TIMEOUT_MS = 180_000;
-const API_TIMEOUT_SECONDS = API_TIMEOUT_MS / 1_000;
 const API_RETRY_DELAYS_MS = [800, 1_800];
 const RETRYABLE_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 const ANALYSIS_TEMPERATURE = 0.18;
@@ -97,6 +96,7 @@ export async function analyzeImageWithApi(input: {
   const { mime, base64 } = dataUrlToMimeAndBase64(input.imageDataUrl);
   const url = normalizeChatCompletionsUrl(input.settings.baseUrl);
   const requestOptions = buildAnalysisRequestOptions(input.settings.model);
+  const timeoutMs = buildApiTimeoutMs(input.settings.apiTimeoutSeconds);
   let sourceFrameEvidence: SourceFrameEvidence | undefined;
   let sourceFrameMetadata = '';
   try {
@@ -113,11 +113,11 @@ export async function analyzeImageWithApi(input: {
     try {
       throwIfAborted(input.signal);
       const requestBody = buildAnalysisRequestBody(requestOptions, input.promptText, mime, base64, sourceFrameMetadata);
-      result = await postAnalysisRequest(url, input.settings.apiKey, requestBody, input.signal);
+      result = await postAnalysisRequest(url, input.settings.apiKey, requestBody, timeoutMs, input.signal);
     } catch (error) {
       if (isAbortError(error)) {
         if (input.signal?.aborted) throw error;
-        throw new Error(`API 请求超过 ${API_TIMEOUT_SECONDS} 秒未返回。`);
+        throw new Error(`API 请求超过 ${timeoutMs / 1_000} 秒未返回。`);
       }
       if (retryDelayIndex < API_RETRY_DELAYS_MS.length && isRetryableTransportError(error)) {
         await delay(API_RETRY_DELAYS_MS[retryDelayIndex], input.signal);
@@ -143,6 +143,12 @@ export async function analyzeImageWithApi(input: {
     }
     throw new Error(normalizeApiErrorMessage(message));
   }
+}
+
+export function buildApiTimeoutMs(value: unknown): number {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  const seconds = Number.isFinite(numericValue) ? numericValue : DEFAULT_API_TIMEOUT_SECONDS;
+  return Math.min(MAX_API_TIMEOUT_SECONDS, Math.max(MIN_API_TIMEOUT_SECONDS, Math.round(seconds))) * 1_000;
 }
 
 export function buildAnalysisRequestBody(
@@ -221,9 +227,15 @@ interface ApiResponsePayload {
   payload: unknown;
 }
 
-async function postAnalysisRequest(url: string, apiKey: string, requestBody: string, signal?: AbortSignal): Promise<ApiResponsePayload> {
+async function postAnalysisRequest(
+  url: string,
+  apiKey: string,
+  requestBody: string,
+  timeoutMs: number,
+  signal?: AbortSignal
+): Promise<ApiResponsePayload> {
   const controller = new AbortController();
-  const timeoutId = globalThis.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
   const abortCurrentRequest = () => controller.abort(signal?.reason);
   signal?.addEventListener('abort', abortCurrentRequest, { once: true });
   try {

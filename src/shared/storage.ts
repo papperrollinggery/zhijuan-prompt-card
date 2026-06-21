@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, HISTORY_LIMIT, STORAGE_KEYS } from './defaults';
+import { DEFAULT_SETTINGS, HISTORY_LIMIT, MAX_API_TIMEOUT_SECONDS, MIN_API_TIMEOUT_SECONDS, STORAGE_KEYS } from './defaults';
 import type { AppSettings, HistoryEntry, InterfaceLanguage, PromptAnalysis } from './types';
 
 type StorageRecord = Record<string, unknown>;
@@ -182,10 +182,17 @@ function normalizeSettings(input?: Partial<AppSettings>): AppSettings {
     baseUrl: input?.baseUrl?.trim() || DEFAULT_SETTINGS.baseUrl,
     apiKey: input?.apiKey ?? DEFAULT_SETTINGS.apiKey,
     model: input?.model?.trim() || DEFAULT_SETTINGS.model,
+    apiTimeoutSeconds: normalizeApiTimeoutSeconds(input?.apiTimeoutSeconds),
     interfaceLanguage: normalizeInterfaceLanguage(input?.interfaceLanguage ?? DEFAULT_SETTINGS.interfaceLanguage),
     defaultGeneratorSite: input?.defaultGeneratorSite || DEFAULT_SETTINGS.defaultGeneratorSite,
     persistentFloatingButton: input?.persistentFloatingButton ?? DEFAULT_SETTINGS.persistentFloatingButton
   };
+}
+
+function normalizeApiTimeoutSeconds(value: unknown): number {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numericValue)) return DEFAULT_SETTINGS.apiTimeoutSeconds;
+  return Math.min(MAX_API_TIMEOUT_SECONDS, Math.max(MIN_API_TIMEOUT_SECONDS, Math.round(numericValue)));
 }
 
 function normalizeInterfaceLanguage(language: unknown): InterfaceLanguage {

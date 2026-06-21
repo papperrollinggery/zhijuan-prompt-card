@@ -516,7 +516,9 @@ export function Panel(props: PanelProps) {
             {state.picking ? <PickingBlock mode={state.picking} labels={labels} onCancel={props.onCancelAnalysis} /> : null}
             {state.target ? <TargetPreview target={state.target} analysis={analysis} loading={state.loading} phase={state.phase} labels={labels} uiLanguage={language} /> : null}
             {state.loading ? <LoadingBlock labels={labels} phase={state.phase} elapsedSeconds={elapsedSeconds} onCancel={props.onCancelAnalysis} /> : null}
-            {state.error ? <ErrorBlock error={state.error} labels={labels} /> : null}
+            {state.error ? (
+              <ErrorBlock error={state.error} labels={labels} onRetry={canRetryTarget(state.target) ? props.onRegenerate : undefined} />
+            ) : null}
             {!state.picking && !state.loading && !state.error && !analysis ? <ReadyBlock labels={labels} onClick={() => fileInputRef.current?.click()} /> : null}
             {analysis ? <ResultBlock {...props} analysis={analysis} activeTab={activeTab} labels={labels} uiLanguage={language} /> : null}
             {state.notice ? <div className="zpc-toast-inline">{state.notice}</div> : null}
@@ -1216,13 +1218,22 @@ function useElapsedSeconds(loading: boolean, startedAt: number | undefined): num
   return elapsed;
 }
 
-function ErrorBlock({ error, labels }: { error: string; labels: (typeof copy)[UiLanguage] }) {
+function ErrorBlock({ error, labels, onRetry }: { error: string; labels: (typeof copy)[UiLanguage]; onRetry?: () => void }) {
   return (
     <div className="zpc-surface zpc-error">
       <strong>{labels.failed}</strong>
       <p>{error}</p>
+      {onRetry ? (
+        <button className="zpc-error__retry" type="button" onClick={onRetry}>
+          {labels.regenerate}
+        </button>
+      ) : null}
     </div>
   );
+}
+
+function canRetryTarget(target: ImageTarget | undefined): boolean {
+  return Boolean(target?.dataUrl || target?.srcUrl);
 }
 
 function ResultBlock(

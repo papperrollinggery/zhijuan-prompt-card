@@ -273,6 +273,13 @@ label {
   font-weight: 850;
 }
 
+label small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
 input,
 select,
 button {
