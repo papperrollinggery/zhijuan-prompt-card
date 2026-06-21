@@ -72,6 +72,11 @@ const trueLegacyAnalysis = {
 };
 assert.equal(getGeneratorPrompt(trueLegacyAnalysis), 'Legacy precise reconstruction prompt with more detail');
 
+const partialLegacyAnalysis = {
+  recreation_prompt: 'Legacy prompt from partial history'
+};
+assert.equal(getGeneratorPrompt(partialLegacyAnalysis as never), 'Legacy prompt from partial history');
+
 const currentAnalysis = {
   ...legacyAnalysis,
   zh: { prompt: '中文界面说明提示词', analysis: '' },
@@ -309,6 +314,19 @@ const leadingImage2VisibleTextAnalysis = {
 assert.equal(
   getGeneratorPrompt(leadingImage2VisibleTextAnalysis),
   'Image 2: appears as visible text at the top; visual target glow behind it.'
+);
+
+const leadingImage2VisibleLabelAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt for visible Image 2 label with words', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'Image 2: sunset appears as visible text at the top; source image glow behind it.'
+  }
+};
+assert.equal(
+  getGeneratorPrompt(leadingImage2VisibleLabelAnalysis),
+  'Image 2: sunset appears as visible text at the top; visual target glow behind it.'
 );
 
 const leadingBracedSchemaCommaNormalVisibleAnalysis = {
@@ -1309,6 +1327,16 @@ const generatorFlagSyntaxAnalysis = {
 };
 assert.equal(getGeneratorPrompt(generatorFlagSyntaxAnalysis), 'clean poster');
 
+const generatorNoFlagListAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after generator no-list syntax', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'clean poster --no text, watermark'
+  }
+};
+assert.equal(getGeneratorPrompt(generatorNoFlagListAnalysis), 'clean poster');
+
 const inlineGeneratorFlagSyntaxAnalysis = {
   ...currentAnalysis,
   en: { prompt: 'Fallback English prompt after inline generator flag syntax', analysis: '' },
@@ -1605,6 +1633,26 @@ const sourceImageSemicolonOnlyHandoffAnalysis = {
   }
 };
 assert.equal(getGeneratorPrompt(sourceImageSemicolonOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const sourceImageCommaOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'source image,'
+  }
+};
+assert.equal(getGeneratorPrompt(sourceImageCommaOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
+
+const referenceImageColonOnlyHandoffAnalysis = {
+  ...currentAnalysis,
+  en: { prompt: 'Fallback English prompt after wrapper-only generator field', analysis: '' },
+  json_prompt: {
+    ...currentAnalysis.json_prompt,
+    generation_prompt: 'reference image:'
+  }
+};
+assert.equal(getGeneratorPrompt(referenceImageColonOnlyHandoffAnalysis), 'Fallback English prompt after wrapper-only generator field');
 
 const sortedJsonPrompt = {
   ...Object.fromEntries(Object.entries(currentAnalysis.json_prompt).sort(([left], [right]) => left.localeCompare(right))),

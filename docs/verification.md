@@ -11,7 +11,7 @@
 - Release package: pass, `npm run release:package`.
 - Release scan: pass, `npm run release:check`.
 - Package output: `release/zhijuan-prompt-card-0.3.3.zip`.
-- Package sha256: `0e16ae4074fcffe6a2574e6c0ce84b75588d887ba030a7e6d5f6c8ae5282090c`.
+- Package sha256: `f7b29f9912fe6a0bf0727660e403ce57355db9f62b5d51eeee5505599e861595`.
 - Dist manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
 - Zip manifest: pass, manifest `version` is `0.3.3`, `version_name` is `0.3.3 Prompt Handoff`.
 - Diff whitespace: pass, `git diff --check`.

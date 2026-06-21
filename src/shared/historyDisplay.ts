@@ -78,8 +78,8 @@ export function getGeneratorPrompt(analysis?: PromptAnalysis): string {
   return firstSanitizedPrompt(
     analysis?.json_prompt?.generation_prompt,
     legacyAnalysis?.recreation_prompt,
-    analysis?.en.prompt,
-    analysis?.zh.prompt
+    analysis?.en?.prompt,
+    analysis?.zh?.prompt
   );
 }
 
@@ -188,7 +188,7 @@ function firstSanitizedPrompt(...prompts: Array<string | undefined>): string {
 }
 
 function isGenericHandoffFiller(prompt: string): boolean {
-  const normalized = prompt.trim().replace(/[.!;]+$/, '').toLowerCase();
+  const normalized = prompt.trim().replace(/[.!;,:：]+$/, '').trim().toLowerCase();
   if (!normalized) return true;
   return /^(?:visual targets?|target screenshots?|target photos?|create|create the described (?:image|target))$/.test(normalized);
 }
@@ -222,7 +222,8 @@ const leadingBoundaryWithDetailPattern = /^(\s*)([.;])\s*with\b/i;
 const leadingWithDetailPattern = /^(\s*)with\b/i;
 const leadingDetachedDetailPattern = new RegExp(String.raw`^\s+(?=(?:with\b|(?:and|then)\s+${handoffActionVerbSource}\b|${handoffActionVerbSource}\b))`, 'i');
 const leadingCreatePattern = /^(\s*)create\b/i;
-const generatorFlagPattern = /\s*--(?:ar|s|stylize|raw|iw|no|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+[^\s,.;]+)?/gi;
+const generatorNoFlagPattern = /\s*--no\b(?:[=\s]+(?:(?!--[a-z]+\b)[^.;\n])+)?/gi;
+const generatorFlagPattern = /\s*--(?:ar|s|stylize|raw|iw|chaos|seed|v|niji|q|quality|style)\b(?:[=\s]+[^\s,.;]+)?/gi;
 const loraTagPattern = /<\s*lora:[^>]+>/gi;
 const breakTokenPattern = /\bBREAK\b/gi;
 const weightedParenthesisPattern = /\(([^()\n]{1,120}?):\s*-?\d+(?:\.\d+)?\)/g;
@@ -279,11 +280,12 @@ function stripLeadingSchemaWrapper(prompt: string): string {
 }
 
 function stripLeadingGeneratorLabelWrapper(prompt: string): string {
-  const match = prompt.match(/^\s*(?:image\s*2|image2)(?:\s+prompt)?\s*[:：.\-]\s*/i);
+  const match = prompt.match(/^\s*(?:image\s*2|image2)(\s+prompt)?\s*[:：.\-]\s*/i);
   if (!match) return prompt;
   const rest = prompt.slice(match[0].length);
   if (!rest) return '';
-  return startsWithVisibleSchemaContinuation(rest) ? prompt : rest;
+  if (match[1]) return rest;
+  return startsWithVisibleImageLabelContinuation(rest) ? prompt : rest;
 }
 
 function stripLeadingBracedSchemaWrapper(prompt: string): string {
@@ -329,6 +331,11 @@ function startsWithVisibleSchemaContinuation(text: string): boolean {
   return /^(?:appears|is|sits|shows|remains)\b(?=[^.;\n]{0,120}\b(?:visible|legible|code\s+label|ui\s+label|text|lettering)\b)/i.test(text);
 }
 
+function startsWithVisibleImageLabelContinuation(text: string): boolean {
+  return startsWithVisibleSchemaContinuation(text)
+    || /^[^.;\n]{0,120}\b(?:appears?|is|sits|shows|remains|displays)\b(?=[^.;\n]{0,120}\b(?:visible|legible|labels?|text|lettering)\b)/i.test(text);
+}
+
 function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
   return transformVisibleTextRuns(prompt, (segment) => {
     let removedUploadRequest = false;
@@ -344,6 +351,7 @@ function sanitizeUnquotedGeneratorPromptText(prompt: string): string {
       .replace(leadingUploadReferenceRequestPattern, markUploadRequestRemoved)
       .replace(leadingReferenceInputRequestPattern, markUploadRequestRemoved)
       .replace(loraTagPattern, '')
+      .replace(generatorNoFlagPattern, '')
       .replace(generatorFlagPattern, '')
       .replace(breakTokenPattern, '')
       .replace(weightedParenthesisPattern, '$1')
