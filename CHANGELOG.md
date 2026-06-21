@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.4
+
+**English**
+
+- Fixes portrait-source reconstruction prompts being able to drift into horizontal or widescreen generator instructions.
+- Uses the uploaded image dimensions as source-frame evidence, then preserves that orientation, aspect ratio, and crop through natural-language prompt copy, JSON prompt copy, and Open in generator.
+- Corrects contradictory model-returned frame claims before generator handoff, including wrong aspect ratios in JSON fields and nested structured prompt details.
+- Keeps correct orientation blockers in negative prompts, so portrait images explicitly block landscape, horizontal, and widescreen drift instead of asking generators to avoid the real source frame.
+- Changes JSON Prompt copy into a structured generator-facing reconstruction prompt, with model-selected adaptive modules plus fields for whole-image atmosphere, subject, composition, style, color, visible text, constraints, and an auxiliary description instead of a prompt-first wrapper.
+- Adds source-style fingerprint guidance so subject labels, costumes, eras, or genre guesses do not override the visible medium, abstraction level, detail budget, and ornament density.
+- Keeps style/detail negative blockers conditional, so low-detail, soft, or flat sources are protected from likely drift without turning every prompt into a heavy universal blocker list.
+- Adds regressions for portrait sports livestream posters where a model incorrectly returns wide-aspect frame wording.
+- Simplifies the popup/options extension HTML to avoid Chrome extension load warnings around module preloading.
+- Hardens the injected content script after extension reloads, reduces noisy Chrome extension errors, and adds a content-script page injection regression check.
+
+**中文**
+
+- 修复竖版原图的复刻提示词可能漂移成横版或宽屏生成指令的问题。
+- 使用上传图片的真实尺寸作为 source-frame 证据，并在自然语言复制、JSON Prompt 复制和“打开生成器”链路中保持原图方向、比例和裁切。
+- 在交给生成器前修正模型返回的矛盾画幅描述，包括 JSON 字段和嵌套结构化提示细节里的错误比例。
+- 反向词保留正确的方向漂移 blocker：竖图会阻止横版、横向和宽屏漂移，不再误把真实竖版画幅当成需要避免的内容。
+- 将 JSON Prompt 复制改为面向生成器的结构化复原提示词，用模型自行判断的动态模块，以及整图氛围、主体、构图、风格、色彩、可见文字、约束和辅助描述字段组织，不再是 `prompt` 首字段包装。
+- 增加源图风格指纹约束，避免主体标签、服饰、时代或类型推断压过可见的媒介、抽象程度、细节预算和装饰密度。
+- 风格/细节反向约束保持条件式，只在确实可能漂移时保护低细节、柔和或扁平来源，避免所有提示词都变成过重的通用禁止词清单。
+- 增加竖版足球直播海报回归，覆盖模型误返回宽屏画幅描述的情况。
+- 简化 popup/options 扩展 HTML，避免 Chrome 插件页围绕 module preload 出现加载警告。
+- 加固网页注入的 content script，降低扩展重新加载后的 Chrome 插件错误噪音，并新增 content-script 页面注入回归检查。
+
 ## 0.3.3
 
 **English**

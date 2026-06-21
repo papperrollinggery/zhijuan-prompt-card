@@ -1,3 +1,4 @@
+import { stringifyGeneratorJsonPrompt } from '../src/shared/historyDisplay';
 import { parsePromptAnalysis } from '../src/shared/jsonRepair';
 
 const baseAnalysis = {
@@ -89,12 +90,105 @@ const generationPrompt = parsed.json_prompt.generation_prompt;
 const generationNegative = parsed.json_prompt.generation_negative_prompt;
 
 assert(generationPrompt.split(/\s+/).length >= parsed.en.prompt.split(/\s+/).length, 'generation_prompt stayed weaker than en.prompt');
+assert(generationPrompt.includes('portrait vertical source frame'), 'generation_prompt did not compile source-frame orientation evidence');
+assert(generationPrompt.includes('observed aspect ratio 9:16'), 'generation_prompt did not compile source aspect ratio evidence');
 assert(generationPrompt.includes('Visible Chinese title'), 'generation_prompt did not compile high-priority observation evidence');
 assert(generationPrompt.includes('visible text 浓汤'), 'generation_prompt did not compile text_elements evidence');
 assert(generationNegative.includes('missing Chinese text'), 'generation_negative_prompt missing Chinese text blocker');
+assert(generationNegative.includes('wrong aspect ratio'), 'generation_negative_prompt missing aspect-ratio blocker');
+assert(generationNegative.includes('wrong orientation'), 'generation_negative_prompt missing orientation blocker');
 assert(generationNegative.includes('wrong material or surface finish'), 'generation_negative_prompt missing material blocker');
 assert(generationNegative.includes('missing steam haze'), 'generation_negative_prompt missing steam-specific blocker');
 assert(!generationNegative.includes('missing splash droplets'), 'steam-only evidence should not create splash blocker');
+
+const wrongFrameAnalysis = JSON.parse(JSON.stringify(baseAnalysis));
+wrongFrameAnalysis.zh.prompt = '横版 15:8 足球直播海报，红蓝对抗，底部大标题。';
+wrongFrameAnalysis.en.prompt =
+  'Create a horizontal sports livestream promo poster in an approximately 15:8 widescreen crop with a red-blue split and large Chinese headline.';
+wrongFrameAnalysis.prompt_core = 'Horizontal 15:8 wide livestream cover with Chinese match text.';
+wrongFrameAnalysis.en_style_tags = ['horizontal poster', 'sports graphic', 'widescreen crop'];
+wrongFrameAnalysis.json_prompt.summary = 'horizontal 15:8 widescreen sports poster';
+wrongFrameAnalysis.json_prompt.subject = 'horizontal 15:8 widescreen sports livestream poster';
+wrongFrameAnalysis.json_prompt.action_pose = 'two players in a horizontal 15:8 poster frame';
+wrongFrameAnalysis.json_prompt.details_appearance = 'wide sports poster texture with red-blue split';
+wrongFrameAnalysis.json_prompt.environment_background = 'horizontal 15:8 widescreen grunge backdrop';
+wrongFrameAnalysis.json_prompt.lighting_atmosphere = 'portrait-compatible dramatic light with 2:1 score text preserved';
+wrongFrameAnalysis.json_prompt.aspect_ratio = '15:8';
+wrongFrameAnalysis.json_prompt.composition_framing = 'horizontal 15:8 widescreen crop with a wide livestream poster layout';
+wrongFrameAnalysis.json_prompt.style_camera = 'horizontal 15:8 widescreen sports poster camera';
+wrongFrameAnalysis.json_prompt.quality_modifiers = ['horizontal poster fidelity', 'source text lock'];
+wrongFrameAnalysis.json_prompt.global_fingerprint.spatial_flow = 'horizontal 15:8 widescreen poster flow';
+wrongFrameAnalysis.json_prompt.global_fingerprint.optical_finish = ['horizontal poster grain'];
+wrongFrameAnalysis.json_prompt.observation_units[0].prompt = 'Keep horizontal 15:8 widescreen poster text hierarchy.';
+wrongFrameAnalysis.json_prompt.observation_units[0].location = 'horizontal 15:8 poster header';
+wrongFrameAnalysis.json_prompt.observation_units[0].must_preserve = ['horizontal 15:8 poster crop'];
+wrongFrameAnalysis.json_prompt.observation_units[0].avoid_drift = ['vertical poster', 'portrait crop', 'missing Chinese text'];
+wrongFrameAnalysis.json_prompt.text_elements[0].location = 'horizontal 15:8 poster lower third';
+wrongFrameAnalysis.json_prompt.text_elements[0].typography = 'widescreen poster title type';
+wrongFrameAnalysis.json_prompt.reconstruction_priorities[0].cue = 'Horizontal 15:8 widescreen poster frame outranks other details.';
+wrongFrameAnalysis.json_prompt.reconstruction_priorities[0].risk_if_missing = 'becomes a vertical poster';
+wrongFrameAnalysis.json_prompt.generation_prompt =
+  'Create a horizontal sports livestream promo poster in an approximately 15:8 widescreen crop, red-blue split, four-player collage, large Chinese headline.';
+wrongFrameAnalysis.json_prompt.spatial_dynamics = 'horizontal 15:8 widescreen poster flow from left to right';
+wrongFrameAnalysis.negative_prompt = 'vertical poster, portrait crop, missing Chinese text';
+wrongFrameAnalysis.json_prompt.generation_negative_prompt = 'vertical poster, portrait crop, low quality artifacts';
+
+const correctedFrameParsed = parsePromptAnalysis(wrongFrameAnalysis, {
+  width: 390,
+  height: 520,
+  orientation: 'portrait',
+  aspectRatio: '3:4'
+});
+const correctedGenerationPrompt = correctedFrameParsed.json_prompt.generation_prompt;
+assert(
+  correctedFrameParsed.json_prompt.aspect_ratio === '3:4',
+  'source image aspect ratio evidence did not override model output'
+);
+assert(
+  correctedFrameParsed.json_prompt.composition_framing.includes('portrait source frame'),
+  'source image orientation evidence did not override composition_framing'
+);
+assert(
+  correctedFrameParsed.json_prompt.composition_framing.includes('uploaded dimensions 390x520'),
+  'source image dimensions were not preserved in composition_framing'
+);
+assert(!/15\s*:\s*8/i.test(correctedGenerationPrompt), 'generation_prompt still exposes the wrong model aspect ratio');
+assert(
+  !/\b(?:horizontal|landscape|widescreen)\b/i.test(correctedGenerationPrompt),
+  'generation_prompt still exposes wrong horizontal orientation words'
+);
+assert(correctedGenerationPrompt.includes('3:4'), 'generation_prompt is missing corrected source aspect ratio');
+assert(correctedGenerationPrompt.includes('portrait'), 'generation_prompt is missing corrected source orientation');
+assert(!/15\s*:\s*8/i.test(correctedFrameParsed.en.prompt), 'English prompt still exposes the wrong model aspect ratio');
+assert(!/\b(?:horizontal|landscape|widescreen)\b/i.test(correctedFrameParsed.en.prompt), 'English prompt still exposes wrong orientation');
+assert(!/15\s*:\s*8/i.test(correctedFrameParsed.zh.prompt), 'Chinese prompt still exposes the wrong model aspect ratio');
+assert(!/横版|横向|横屏|宽屏|宽幅|横构图/.test(correctedFrameParsed.zh.prompt), 'Chinese prompt still exposes wrong orientation');
+assert(correctedFrameParsed.negative_prompt.includes('horizontal poster'), 'negative_prompt is missing corrected portrait drift blocker');
+assert(correctedFrameParsed.negative_prompt.includes('wrong aspect ratio'), 'negative_prompt is missing corrected aspect blocker');
+assert(!/vertical poster|portrait crop/i.test(correctedFrameParsed.negative_prompt), 'negative_prompt still blocks the real portrait source frame');
+assert(
+  !/vertical poster|portrait crop/i.test(correctedFrameParsed.json_prompt.generation_negative_prompt),
+  'generation_negative_prompt still blocks the real portrait source frame'
+);
+
+const correctedGeneratorJson = JSON.parse(stringifyGeneratorJsonPrompt(correctedFrameParsed));
+assert(correctedGeneratorJson.task === 'image_reconstruction', 'generator JSON should expose a structured image reconstruction task');
+assert(correctedGeneratorJson.prompt === undefined, 'generator JSON should not use a prompt-first top-level field');
+assert(correctedGeneratorJson.description === correctedGenerationPrompt, 'generator JSON description should match the corrected generator prompt');
+assert(correctedGeneratorJson.composition?.aspect_ratio === '3:4', 'generator JSON composition is missing corrected source aspect ratio');
+assert(!/15\s*:\s*8/i.test(JSON.stringify([correctedGeneratorJson.description, correctedGeneratorJson.composition])), 'generator JSON still exposes wrong aspect ratio');
+assert(
+  !/\b(?:horizontal|landscape|widescreen)\b/i.test(JSON.stringify([correctedGeneratorJson.description, correctedGeneratorJson.composition])),
+  'generator JSON still exposes wrong orientation'
+);
+assert(
+  correctedGeneratorJson.constraints.negative_prompt.includes('horizontal poster'),
+  'generator JSON negative_prompt is missing corrected portrait blocker'
+);
+assert(
+  !/vertical poster|portrait crop/i.test(correctedGeneratorJson.constraints.negative_prompt),
+  'generator JSON negative_prompt still blocks the real portrait source frame'
+);
 
 const looseModelJson = `
 The requested object is:

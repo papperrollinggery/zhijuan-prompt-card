@@ -48,11 +48,15 @@ Zhijuan Prompt Card separates copy-ready prompt text from internal structured da
 |---|---|
 | English | Primary recreation prompt for external image generators |
 | Chinese | Chinese-language prompt for review, editing, and Chinese workflows |
-| JSON | Generator-facing JSON prompt that starts with a `prompt` field |
+| JSON | Structured generator-facing reconstruction prompt with adaptive modules, atmosphere, subject, composition, style, color, text, constraints, and auxiliary description fields |
 | Negative | Drift blockers and quality constraints |
 | Tags | Compact style and material descriptors |
 
 Since v0.3.3, normal copy, history copy, and Open in generator use a generator-safe prompt. Internal schema metadata such as `schema_version: "reconstruction_v2"` stays in structured exports and no longer becomes default generator text unless it is genuinely visible in the source image.
+
+Since v0.3.4, uploaded image dimensions are used as source-frame evidence, so portrait, landscape, and square inputs keep their orientation and aspect ratio in both natural-language prompts and generator-facing JSON.
+
+Generator-facing JSON is structured, not prompt-first. It uses generator-ready fields such as `task`, `adaptive_modules`, `subject`, `composition`, `style`, `atmosphere`, `color_palette`, `materials_texture`, `text_elements`, `constraints`, and `description`; internal schema fields still stay out, and structure fields that conflict with the compiled generator description are filtered before copy.
 
 ## Install
 
@@ -155,6 +159,8 @@ npm run build
 npm run check:storage
 npm run check:json-repair
 npm run check:prompt-goal
+npm run check:extension-pages
+npm run check:content-script
 ```
 
 Package a release zip:
@@ -171,12 +177,12 @@ npm run release:check
 
 ## Project Status
 
-- Latest release: [v0.3.3](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.3)
+- Latest release: [v0.3.4](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.4)
 - Distribution: GitHub release zip and source build
 - Browser store listings: not published yet
 - License: [Apache-2.0](LICENSE)
 
-Release tags are machine-simple, for example `v0.3.3`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
+Release tags are machine-simple, for example `v0.3.4`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
 
 ## Contributing
 

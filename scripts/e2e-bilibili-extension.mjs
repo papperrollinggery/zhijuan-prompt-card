@@ -429,7 +429,11 @@ async function run() {
     const jsonClipboard = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
     if (!jsonClipboard.includes('Bilibili homepage capture test')) throw new Error('copy JSON did not write JSON prompt');
     const jsonPrompt = JSON.parse(jsonClipboard);
-    if (Object.keys(jsonPrompt)[0] !== 'prompt') throw new Error('copy JSON did not put prompt first');
+    if (Object.keys(jsonPrompt)[0] !== 'task') throw new Error('copy JSON did not put the structured task first');
+    if (jsonPrompt.task !== 'image_reconstruction') throw new Error('copy JSON did not use the structured reconstruction task');
+    if (jsonPrompt.prompt !== undefined) throw new Error('copy JSON leaked a prompt-first top-level field');
+    if (!Array.isArray(jsonPrompt.adaptive_modules) || !jsonPrompt.adaptive_modules.length) throw new Error('copy JSON did not include adaptive modules');
+    if (!jsonPrompt.description?.includes('Bilibili homepage')) throw new Error('copy JSON did not include auxiliary generator description');
     if (/schema_version|reconstruction_v2/.test(jsonClipboard)) throw new Error('copy JSON leaked internal schema metadata');
     evidence.checks.push('copy_json_ok');
 

@@ -1,5 +1,5 @@
-import { dataUrlToMimeAndBase64 } from './imageData';
-import { parsePromptAnalysis } from './jsonRepair';
+import { dataUrlToMimeAndBase64, getDataUrlImageDimensions, type ImageDimensions } from './imageData';
+import { parsePromptAnalysis, type SourceFrameEvidence } from './jsonRepair';
 import type { AppSettings, PromptAnalysis } from './types';
 
 const API_TIMEOUT_MS = 180_000;
@@ -97,13 +97,22 @@ export async function analyzeImageWithApi(input: {
   const { mime, base64 } = dataUrlToMimeAndBase64(input.imageDataUrl);
   const url = normalizeChatCompletionsUrl(input.settings.baseUrl);
   const requestOptions = buildAnalysisRequestOptions(input.settings.model);
+  let sourceFrameEvidence: SourceFrameEvidence | undefined;
+  let sourceFrameMetadata = '';
+  try {
+    const dimensions = await getDataUrlImageDimensions(input.imageDataUrl, input.signal);
+    sourceFrameEvidence = dimensions ? buildSourceFrameEvidence(dimensions) : undefined;
+    sourceFrameMetadata = sourceFrameEvidence ? formatSourceImageFrameMetadata(sourceFrameEvidence) : '';
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+  }
 
   let retryDelayIndex = 0;
   while (true) {
     let result: ApiResponsePayload;
     try {
       throwIfAborted(input.signal);
-      const requestBody = buildAnalysisRequestBody(requestOptions, input.promptText, mime, base64);
+      const requestBody = buildAnalysisRequestBody(requestOptions, input.promptText, mime, base64, sourceFrameMetadata);
       result = await postAnalysisRequest(url, input.settings.apiKey, requestBody, input.signal);
     } catch (error) {
       if (isAbortError(error)) {
@@ -119,7 +128,7 @@ export async function analyzeImageWithApi(input: {
     }
 
     if (result.response.ok) {
-      return parsePromptAnalysis(extractAssistantText(result.payload));
+      return parsePromptAnalysis(extractAssistantText(result.payload), sourceFrameEvidence);
     }
 
     const message = extractApiError(result.payload) || `API request failed: ${result.response.status}`;
@@ -136,7 +145,13 @@ export async function analyzeImageWithApi(input: {
   }
 }
 
-function buildAnalysisRequestBody(options: AnalysisRequestOptions, promptText: string, mime: string, base64: string): string {
+export function buildAnalysisRequestBody(
+  options: AnalysisRequestOptions,
+  promptText: string,
+  mime: string,
+  base64: string,
+  sourceFrameMetadata = ''
+): string {
   const { image_detail, ...requestOptions } = options;
   const imageUrl: { url: string; detail?: ImageDetail } = { url: `data:${mime};base64,${base64}` };
   if (image_detail) imageUrl.detail = image_detail;
@@ -147,12 +162,58 @@ function buildAnalysisRequestBody(options: AnalysisRequestOptions, promptText: s
       {
         role: 'user',
         content: [
-          { type: 'text', text: promptText },
+          { type: 'text', text: appendSourceImageFrameMetadata(promptText, sourceFrameMetadata) },
           { type: 'image_url', image_url: imageUrl }
         ]
       }
     ]
   });
+}
+
+export function buildSourceFrameEvidence(dimensions: ImageDimensions): SourceFrameEvidence {
+  const width = Math.max(1, Math.round(dimensions.width));
+  const height = Math.max(1, Math.round(dimensions.height));
+  const orientation = width === height ? 'square' : width > height ? 'landscape' : 'portrait';
+  const aspectRatio = formatApproximateAspectRatio(width, height);
+  return { width, height, orientation, aspectRatio };
+}
+
+export function formatSourceImageFrameMetadata(sourceFrame: SourceFrameEvidence): string {
+  return [
+    'Source image frame metadata:',
+    `- Uploaded image dimensions: ${sourceFrame.width} px wide x ${sourceFrame.height} px tall.`,
+    `- Observed orientation: ${sourceFrame.orientation}.`,
+    `- Observed aspect ratio: approximately ${sourceFrame.aspectRatio}.`,
+    'Use this metadata as hard source-frame evidence. Preserve this orientation, aspect ratio, and crop in every prompt field. Do not call the image horizontal, landscape, widescreen, vertical, portrait, or square unless that matches this metadata.'
+  ].join('\n');
+}
+
+function appendSourceImageFrameMetadata(promptText: string, sourceFrameMetadata: string): string {
+  return sourceFrameMetadata ? `${promptText.trim()}\n\n${sourceFrameMetadata}` : promptText;
+}
+
+function formatApproximateAspectRatio(width: number, height: number): string {
+  const divisor = greatestCommonDivisor(width, height);
+  const reducedWidth = width / divisor;
+  const reducedHeight = height / divisor;
+  if (Math.max(reducedWidth, reducedHeight) <= 100) return `${reducedWidth}:${reducedHeight}`;
+  if (width >= height) return `${trimRatio(width / height)}:1`;
+  return `1:${trimRatio(height / width)}`;
+}
+
+function trimRatio(value: number): string {
+  return value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function greatestCommonDivisor(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+  while (b) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a || 1;
 }
 
 interface ApiResponsePayload {

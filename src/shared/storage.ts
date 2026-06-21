@@ -17,7 +17,12 @@ async function readLocal<T>(keys: string[]): Promise<Record<string, T | undefine
   if (!hasChromeStorage()) {
     return Object.fromEntries(keys.map((key) => [key, memoryStorage.get(key) as T | undefined]));
   }
-  return chrome.storage.local.get(keys) as Promise<Record<string, T | undefined>>;
+  try {
+    return await chrome.storage.local.get(keys) as Record<string, T | undefined>;
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return Object.fromEntries(keys.map((key) => [key, memoryStorage.get(key) as T | undefined]));
+    throw error;
+  }
 }
 
 async function writeLocal(values: StorageRecord): Promise<void> {
@@ -25,7 +30,16 @@ async function writeLocal(values: StorageRecord): Promise<void> {
     for (const [key, value] of Object.entries(values)) memoryStorage.set(key, value);
     return;
   }
-  await chrome.storage.local.set(values);
+  try {
+    await chrome.storage.local.set(values);
+  } catch (error) {
+    if (!isExtensionContextInvalidated(error)) throw error;
+    for (const [key, value] of Object.entries(values)) memoryStorage.set(key, value);
+  }
+}
+
+function isExtensionContextInvalidated(error: unknown): boolean {
+  return /extension context invalidated/i.test(error instanceof Error ? error.message : String(error));
 }
 
 export async function getSettings(): Promise<AppSettings> {

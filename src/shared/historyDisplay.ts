@@ -102,33 +102,47 @@ export function stringifyJsonPrompt(jsonPrompt: PromptAnalysis['json_prompt'] | 
 
 export function stringifyGeneratorJsonPrompt(analysis: PromptAnalysis | undefined): string {
   const jsonPrompt = toRecord(analysis?.json_prompt);
+  const globalFingerprint = toRecord(jsonPrompt.global_fingerprint);
+  const description = getGeneratorPrompt(analysis);
+  const negativePrompt = firstFilledText(jsonPrompt.generation_negative_prompt, analysis?.negative_prompt);
+  const alignmentPrompt = [description, negativePrompt].filter(Boolean).join(' ');
   const output: Record<string, unknown> = {};
+  const composition: Record<string, unknown> = {};
+  const style: Record<string, unknown> = {};
+  const atmosphere: Record<string, unknown> = {};
+  const constraints: Record<string, unknown> = {};
 
-  setFilledGeneratorJsonField(output, 'prompt', getGeneratorPrompt(analysis));
-  setFilledGeneratorJsonField(output, 'negative_prompt', firstFilledText(jsonPrompt.generation_negative_prompt, analysis?.negative_prompt));
-  setFilledGeneratorJsonField(output, 'aspect_ratio', jsonPrompt.aspect_ratio);
-  setFilledGeneratorJsonField(output, 'prompt_core', analysis?.prompt_core);
-  setFilledGeneratorJsonField(output, 'style_tags', analysis?.en_style_tags);
-  setFilledGeneratorJsonField(output, 'subject', jsonPrompt.subject);
-  setFilledGeneratorJsonField(output, 'action_pose', jsonPrompt.action_pose);
-  setFilledGeneratorJsonField(output, 'details_appearance', jsonPrompt.details_appearance);
-  setFilledGeneratorJsonField(output, 'environment_background', jsonPrompt.environment_background);
-  setFilledGeneratorJsonField(output, 'lighting_atmosphere', jsonPrompt.lighting_atmosphere);
-  setFilledGeneratorJsonField(output, 'composition_framing', jsonPrompt.composition_framing);
-  setFilledGeneratorJsonField(output, 'style_camera', jsonPrompt.style_camera);
-  setFilledGeneratorJsonField(output, 'colors', jsonPrompt.colors);
-  setFilledGeneratorJsonField(output, 'materials', jsonPrompt.materials);
+  setFilledGeneratorJsonField(output, 'task', 'image_reconstruction');
+  setFilledGeneratorJsonField(output, 'adaptive_modules', toGeneratorAdaptiveModules(jsonPrompt.observation_units, alignmentPrompt));
+  setAlignedGeneratorJsonField(output, 'subject', jsonPrompt.subject, description);
+  setAlignedGeneratorJsonField(output, 'action_pose', jsonPrompt.action_pose, description);
+  setAlignedGeneratorJsonField(output, 'appearance', jsonPrompt.details_appearance, description);
+  setAlignedGeneratorJsonField(output, 'environment', jsonPrompt.environment_background, description);
+  setAlignedGeneratorJsonField(output, 'lighting', jsonPrompt.lighting_atmosphere, description);
+  setFilledGeneratorJsonField(composition, 'aspect_ratio', jsonPrompt.aspect_ratio);
+  setAlignedGeneratorJsonField(composition, 'framing', jsonPrompt.composition_framing, description);
+  setAlignedGeneratorJsonField(composition, 'spatial_dynamics', jsonPrompt.spatial_dynamics, description);
+  setFilledGeneratorJsonField(output, 'composition', composition);
+  setFilledGeneratorJsonField(style, 'tags', analysis?.en_style_tags);
+  setAlignedGeneratorJsonField(style, 'camera', jsonPrompt.style_camera, description);
+  setFilledGeneratorJsonField(style, 'render_finish', globalFingerprint.render_finish);
+  setFilledGeneratorJsonField(style, 'optical_finish', globalFingerprint.optical_finish);
+  setFilledGeneratorJsonField(style, 'density', globalFingerprint.density);
+  setFilledGeneratorStyleIndex(style, globalFingerprint.style_index);
+  setFilledGeneratorJsonField(output, 'style', style);
+  setAlignedGeneratorJsonField(atmosphere, 'mood', jsonPrompt.lighting_atmosphere, description);
+  setFilledGeneratorJsonField(atmosphere, 'optical_finish', globalFingerprint.optical_finish);
+  setFilledGeneratorJsonField(atmosphere, 'density', globalFingerprint.density);
+  setFilledGeneratorJsonField(output, 'atmosphere', atmosphere);
+  setFilledGeneratorJsonField(output, 'color_palette', firstFilledValue(jsonPrompt.colors, globalFingerprint.palette));
+  setAlignedGeneratorJsonArrayField(output, 'materials_texture', jsonPrompt.materials, description);
+  setFilledGeneratorJsonField(output, 'text_elements', toGeneratorTextElements(jsonPrompt.text_elements));
   setFilledGeneratorJsonField(output, 'quality_modifiers', jsonPrompt.quality_modifiers);
-  setFilledGeneratorJsonField(output, 'spatial_dynamics', jsonPrompt.spatial_dynamics);
-  setFilledGeneratorJsonField(output, 'text_elements', Array.isArray(jsonPrompt.text_elements) ? jsonPrompt.text_elements.map((item) => orderKnownKeysIfRecord(item, textElementKeyOrder)) : undefined);
-  setFilledGeneratorJsonField(output, 'fidelity_priorities', jsonPrompt.fidelity_priorities);
-  setFilledGeneratorJsonField(
-    output,
-    'reconstruction_priorities',
-    Array.isArray(jsonPrompt.reconstruction_priorities)
-      ? jsonPrompt.reconstruction_priorities.map((item) => orderKnownKeysIfRecord(item, reconstructionPriorityKeyOrder))
-      : undefined
-  );
+  setAlignedGeneratorJsonArrayField(constraints, 'fidelity_controls', jsonPrompt.fidelity_priorities, description);
+  setAlignedGeneratorJsonArrayField(constraints, 'must_preserve', getGeneratorPreserveControls(jsonPrompt), description);
+  setFilledGeneratorJsonField(constraints, 'negative_prompt', negativePrompt);
+  setFilledGeneratorJsonField(output, 'constraints', constraints);
+  setFilledGeneratorJsonField(output, 'description', description);
 
   return JSON.stringify(output, null, 2);
 }
@@ -213,8 +227,91 @@ function orderKnownKeysIfRecord(value: unknown, keyOrder: readonly string[]): un
 }
 
 function setFilledGeneratorJsonField(target: Record<string, unknown>, key: string, value: unknown): void {
-  const normalized = normalizeGeneratorJsonValue(value);
+  const normalized = normalizeGeneratorJsonValue(value, key);
   if (isFilledGeneratorJsonValue(normalized)) target[key] = normalized;
+}
+
+function setAlignedGeneratorJsonField(target: Record<string, unknown>, key: string, value: unknown, prompt: string): void {
+  const normalized = normalizeGeneratorJsonValue(value, key);
+  if (isFilledGeneratorJsonValue(normalized) && isPromptAlignedGeneratorValue(normalized, prompt)) target[key] = normalized;
+}
+
+function setAlignedGeneratorJsonArrayField(target: Record<string, unknown>, key: string, value: unknown, prompt: string): void {
+  if (!Array.isArray(value)) {
+    setAlignedGeneratorJsonField(target, key, value, prompt);
+    return;
+  }
+  const normalized = value
+    .map((item) => normalizeGeneratorJsonValue(item))
+    .filter((item) => isFilledGeneratorJsonValue(item) && isPromptAlignedGeneratorValue(item, prompt));
+  if (normalized.length) target[key] = normalized;
+}
+
+function firstFilledValue(...values: unknown[]): unknown {
+  for (const value of values) {
+    const normalized = normalizeGeneratorJsonValue(value);
+    if (isFilledGeneratorJsonValue(normalized)) return value;
+  }
+  return undefined;
+}
+
+function setFilledGeneratorStyleIndex(target: Record<string, unknown>, value: unknown): void {
+  if (typeof value === 'number' && value > 0) target.style_index = value;
+}
+
+function toGeneratorTextElements(value: unknown): unknown {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item) => {
+      if (!isRecord(item)) return undefined;
+      const output: Record<string, unknown> = {};
+      setFilledGeneratorJsonField(output, 'text', item.content);
+      setFilledGeneratorJsonField(output, 'language', item.language);
+      setFilledGeneratorJsonField(output, 'role', item.role);
+      setFilledGeneratorJsonField(output, 'placement', item.location);
+      setFilledGeneratorJsonField(output, 'typography', item.typography);
+      setFilledGeneratorJsonField(output, 'legibility', item.legibility);
+      setFilledGeneratorJsonField(output, 'priority', item.priority);
+      return output;
+    })
+    .filter(isFilledGeneratorJsonValue);
+}
+
+function toGeneratorAdaptiveModules(value: unknown, prompt: string): unknown {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item) => {
+      if (!isRecord(item)) return undefined;
+      const output: Record<string, unknown> = {};
+      setFilledGeneratorJsonField(output, 'module', item.kind || item.id);
+      setFilledGeneratorJsonField(output, 'priority', item.priority);
+      setAlignedGeneratorJsonField(output, 'instruction', item.prompt, prompt);
+      setAlignedGeneratorJsonField(output, 'evidence', item.evidence, prompt);
+      setFilledGeneratorJsonField(output, 'placement', item.location);
+      setAlignedGeneratorJsonArrayField(output, 'must_preserve', item.must_preserve, prompt);
+      setAlignedGeneratorJsonArrayField(output, 'avoid_drift', item.avoid_drift, prompt);
+      return Object.keys(output).some((key) => !['module', 'priority'].includes(key)) ? output : undefined;
+    })
+    .filter(isFilledGeneratorJsonValue);
+}
+
+function getGeneratorPreserveControls(jsonPrompt: Record<string, unknown>): string[] {
+  const controls: string[] = [];
+  const observationUnits = Array.isArray(jsonPrompt.observation_units) ? jsonPrompt.observation_units : [];
+  const reconstructionPriorities = Array.isArray(jsonPrompt.reconstruction_priorities) ? jsonPrompt.reconstruction_priorities : [];
+  for (const unit of observationUnits) {
+    if (!isRecord(unit)) continue;
+    if (typeof unit.prompt === 'string') controls.push(unit.prompt);
+    if (!Array.isArray(unit.must_preserve)) continue;
+    for (const item of unit.must_preserve) {
+      if (typeof item === 'string') controls.push(item);
+    }
+  }
+  for (const priority of reconstructionPriorities) {
+    if (!isRecord(priority)) continue;
+    if (typeof priority.cue === 'string') controls.push(priority.cue);
+  }
+  return [...new Set(controls.map((item) => item.trim()).filter(Boolean))];
 }
 
 function firstFilledText(...values: unknown[]): string {
@@ -242,7 +339,57 @@ function normalizeGeneratorJsonValue(value: unknown, key = ''): unknown {
 }
 
 function shouldPreserveGeneratorJsonText(key: string): boolean {
-  return key === 'content';
+  return key === 'content' || key === 'text';
+}
+
+function isPromptAlignedGeneratorValue(value: unknown, prompt: string): boolean {
+  const text = flattenGeneratorJsonText(value);
+  if (!text) return true;
+  const fieldTokens = getGeneratorJsonContentTokens(text);
+  if (fieldTokens.length < 2) return true;
+  const promptTokens = new Set(getGeneratorJsonContentTokens(prompt));
+  if (!promptTokens.size) return true;
+  const overlap = [...new Set(fieldTokens)].filter((token) => promptTokens.has(token)).length;
+  return overlap >= Math.min(2, Math.ceil(fieldTokens.length * 0.25));
+}
+
+function flattenGeneratorJsonText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(flattenGeneratorJsonText).filter(Boolean).join(' ');
+  if (isRecord(value)) return Object.values(value).map(flattenGeneratorJsonText).filter(Boolean).join(' ');
+  return '';
+}
+
+const generatorJsonTokenStopwords = new Set([
+  'about',
+  'after',
+  'again',
+  'against',
+  'around',
+  'background',
+  'before',
+  'clear',
+  'color',
+  'create',
+  'detail',
+  'details',
+  'frame',
+  'image',
+  'layout',
+  'light',
+  'poster',
+  'preserve',
+  'source',
+  'style',
+  'target',
+  'texture',
+  'visual',
+  'with',
+  'wrong'
+]);
+
+function getGeneratorJsonContentTokens(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z0-9][a-z0-9-]{3,}|[\u4e00-\u9fff]{2,}/g) || []).filter((token) => !generatorJsonTokenStopwords.has(token));
 }
 
 function isFilledGeneratorJsonValue(value: unknown): boolean {

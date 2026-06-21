@@ -38,9 +38,13 @@ export async function checkLatestRelease(currentVersion = getInstalledVersion())
 }
 
 export function getInstalledVersion() {
-  if (typeof chrome === 'undefined' || !chrome.runtime?.getManifest) return 'unknown';
-  const manifest = chrome.runtime.getManifest();
-  return manifest.version || manifest.version_name || 'unknown';
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.getManifest) return 'unknown';
+    const manifest = chrome.runtime.getManifest();
+    return manifest.version || manifest.version_name || 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 export function normalizeReleaseVersion(version: string) {
