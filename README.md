@@ -177,12 +177,12 @@ npm run release:check
 
 ## Project Status
 
-- Latest release: [v0.3.4](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.4)
+- Latest release: [v0.3.5](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.5)
 - Distribution: GitHub release zip and source build
 - Browser store listings: not published yet
 - License: [Apache-2.0](LICENSE)
 
-Release tags are machine-simple, for example `v0.3.4`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
+Release tags are machine-simple, for example `v0.3.5`. Detailed user-facing changes live in [CHANGELOG.md](CHANGELOG.md) and GitHub release notes.
 
 ## Contributing
 

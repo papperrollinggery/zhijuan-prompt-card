@@ -177,12 +177,12 @@ npm run release:check
 
 ## 项目状态
 
-- 最新版本：[v0.3.4](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.4)
+- 最新版本：[v0.3.5](https://github.com/papperrollinggery/zhijuan-prompt-card/releases/tag/v0.3.5)
 - 分发方式：GitHub release zip 和源码构建
 - 浏览器商店：暂未发布
 - License：[Apache-2.0](LICENSE)
 
-Release tag 保持机器友好格式，例如 `v0.3.4`。详细用户可见变化放在 [CHANGELOG.md](CHANGELOG.md) 和 GitHub release notes。
+Release tag 保持机器友好格式，例如 `v0.3.5`。详细用户可见变化放在 [CHANGELOG.md](CHANGELOG.md) 和 GitHub release notes。
 
 ## 贡献
 

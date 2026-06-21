@@ -1,5 +1,20 @@
 # Verification
 
+## v0.3.5 Release Candidate
+
+- API timeout regression: pass, `npm run check:api-options`; covers default 600 second timeout and clamp range from 60 to 1800 seconds.
+- Settings storage regression: pass, `npm run check:storage`; covers legacy settings migration and invalid timeout fallback.
+- Popup/options load diagnostic: pass, `npm run check:extension-pages`; options page rendered current version `0.3.5` and the API timeout setting with no console or page errors.
+- Content-script page injection diagnostic: pass, `npm run check:content-script`; local page injection and extension reload recovery reported zero severe extension-owned errors.
+- Typecheck: pass, `npm run typecheck`.
+- Build: pass, `npm run build`.
+- Release package: pass, `npm run release:package`.
+- Release scan: pass, `npm run release:check`.
+- Package output: `release/zhijuan-prompt-card-0.3.5.zip`.
+- Package sha256: `a4fedbb122500908339c401c413c2d1ded23f94cd6574c91568a18e444cdc8e8`.
+- Dist manifest: pass, manifest `version` is `0.3.5`, `version_name` is `0.3.5 Timeout Retry`.
+- Diff whitespace: pass, `git diff --check`.
+
 ## v0.3.4 Release Candidate
 
 - Prompt handoff regression: pass, `npm run check:storage`; covers generator-safe prompt copy, structured generator-facing JSON copy, adaptive modules, whole-image atmosphere, internal schema/raw-field exclusion, aligned structure-field preservation, visible text preservation, schema/Image2/reference wrapper stripping, and generator syntax cleanup.
