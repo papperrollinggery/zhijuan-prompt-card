@@ -18,7 +18,7 @@
 - Thread review: pass, final Engineer / QA / Cold reviewer Codex worker threads found no P1/P2 blockers.
 - Cloud Codex review: pass on PR head `d3ed71f60c`; no major issues found before release documentation update.
 - v0.3.3 scope: generator-safe prompt handoff for normal copy, history copy, and Open in generator; structured JSON remains copyable; schema/Image2/reference-upload wrappers stay out of generator-facing prompt text unless they are true visible text.
-- Release status: pending final PR push, cloud review refresh, merge, tag, and GitHub release.
+- Release status: pushed to PR branch; pending final cloud review, user refreshed-extension acceptance, merge, tag, and GitHub release.
 
 ## v0.3.2 Test Build
 
